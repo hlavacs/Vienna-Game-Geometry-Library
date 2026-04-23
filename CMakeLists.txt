@@ -24,14 +24,20 @@ file(GLOB TERATHON_SOURCES ${terathon_math_library_SOURCE_DIR}/*.cpp)
 add_library(TerathonMathLibrary STATIC ${TERATHON_SOURCES})
 target_include_directories(TerathonMathLibrary PUBLIC ${terathon_math_library_SOURCE_DIR})
 
+find_package(Vulkan REQUIRED)
+
+
 # Library
 add_library(vgeo STATIC
     vgeo/CollisionSystem.cpp
     vgeo/internal/ConvexHullBuilder.cpp
+    vgeo/internal/gpu/GpuBackend.cpp
 )
 target_compile_features(vgeo PUBLIC cxx_std_26)
 target_include_directories(vgeo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(vgeo PRIVATE TerathonMathLibrary)
+
+target_link_libraries(vgeo PUBLIC Vulkan::Vulkan)
 
 # Examples and tests
 if(PROJECT_IS_TOP_LEVEL)
