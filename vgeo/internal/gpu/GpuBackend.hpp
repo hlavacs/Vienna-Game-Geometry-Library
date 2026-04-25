@@ -1,15 +1,15 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vector>
 #include <print>
+#include <vector>
+#include <vulkan/vulkan.h>
 
-namespace vgeo {
+namespace vgeo::internal {
 
-class GpuBackend{
-    
-    public:
-        GpuBackend();
+class GpuBackend {
+
+  public:
+    GpuBackend();
 };
 
-}  
+} // namespace vgeo::internal

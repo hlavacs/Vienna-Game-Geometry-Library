@@ -6,7 +6,7 @@
 #include <span>
 #include <vector>
 
-namespace vgeo {
+namespace vgeo::internal {
 
 class ConvexHull {
   public:
@@ -20,4 +20,4 @@ class ConvexHull {
     std::vector<uint32_t> m_indices;
 };
 
-} // namespace vgeo
+} // namespace vgeo::internal

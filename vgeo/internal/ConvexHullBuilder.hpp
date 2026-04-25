@@ -4,7 +4,7 @@
 #include <vgeo/Point3D.hpp>
 #include <vgeo/internal/cpu/ConvexHull.hpp>
 
-namespace vgeo {
+namespace vgeo::internal {
 
 class ConvexHullBuilder {
   public:
@@ -13,4 +13,4 @@ class ConvexHullBuilder {
     ConvexHullBuilder() = delete;
 };
 
-} // namespace vgeo
+} // namespace vgeo::internal

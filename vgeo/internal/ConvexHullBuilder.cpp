@@ -366,7 +366,7 @@ HullMesh computeHull(std::span<const vgeo::Point3D> inputPoints) {
 
 }
 
-namespace vgeo {
+namespace vgeo::internal {
 
 ConvexHull ConvexHullBuilder::buildCpu(std::span<const vgeo::Point3D> inputPoints) {
     assert(inputPoints.size() >= 4);
@@ -395,4 +395,4 @@ ConvexHull ConvexHullBuilder::buildGpu(std::span<const vgeo::Point3D> inputPoint
     // TODO: convert to GPU sided convex hull
 }
 
-} // namespace vgeo
+} // namespace vgeo::internal
