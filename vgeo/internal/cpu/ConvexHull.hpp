@@ -9,11 +9,11 @@
 namespace vgeo::internal {
 
 class ConvexHull {
-  public:
+public:
     std::span<const Point3D> getVertices() const;
     std::span<const uint32_t> getIndices() const;
 
-  private:
+private:
     friend class ConvexHullBuilder;
     ConvexHull() = default;
     std::vector<Point3D> m_vertices;

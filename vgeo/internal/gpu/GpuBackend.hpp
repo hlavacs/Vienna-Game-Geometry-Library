@@ -8,7 +8,7 @@ namespace vgeo::internal {
 
 class GpuBackend {
 
-  public:
+public:
     GpuBackend();
 };
 

@@ -6,6 +6,7 @@ IndentWidth: 4
 UseTab: Never
 ColumnLimit: 120
 PointerAlignment: Left
+AccessModifierOffset: -4
 
 BreakBeforeBraces: Attach
 FixNamespaceComments: false
