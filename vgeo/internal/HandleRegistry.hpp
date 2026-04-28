@@ -7,7 +7,8 @@
 
 namespace vgeo::internal {
 
-template <ShapeType Type> class HandleRegistry {
+template <ShapeType Type>
+class HandleRegistry {
 public:
     Handle allocate() {
         if (!m_freeList.empty()) {

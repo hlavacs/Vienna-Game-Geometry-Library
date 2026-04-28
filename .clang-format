@@ -10,6 +10,7 @@ AccessModifierOffset: -4
 
 BreakBeforeBraces: Attach
 FixNamespaceComments: false
+AlwaysBreakTemplateDeclarations: Yes
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortLoopsOnASingleLine: false

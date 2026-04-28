@@ -5,7 +5,8 @@
 #include <cstdint>
 
 namespace vgeo::internal {
-template <ShapeType> class HandleRegistry;
+template <ShapeType>
+class HandleRegistry;
 }
 
 namespace vgeo {
@@ -38,7 +39,8 @@ public:
     bool operator==(const Handle&) const noexcept = default;
 
 private:
-    template <ShapeType Type> friend class internal::HandleRegistry;
+    template <ShapeType Type>
+    friend class internal::HandleRegistry;
 
     explicit Handle(uint32_t id) noexcept : m_id(id) {}
 
