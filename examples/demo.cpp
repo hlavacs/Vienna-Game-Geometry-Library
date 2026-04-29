@@ -3,6 +3,6 @@
 
 int main() {
     vgeo::CollisionSystem system;
-    vgeo::GpuBackend backend;
+    //vgeo::GpuBackend<vgeo::AABB> backend;
     return 0;
 }

@@ -1,6 +1,9 @@
 #include <vgeo/internal/gpu/GpuBackend.hpp>
 
 namespace vgeo {
+
+    
+    /*
     GpuBackend::GpuBackend(){
         // Create a Vulkan instance
         VkInstanceCreateInfo createInfo = {};
@@ -22,11 +25,14 @@ namespace vgeo {
         for (const auto& device : devices) {
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(device, &deviceProperties);
+            
 
-            std::print("GPU: {}\n", deviceProperties.deviceName);
+            std::println("GPU: {}", deviceProperties.deviceName);
         }
 
         // Destroy the Vulkan instance
         vkDestroyInstance(instance, nullptr);
     }
+    */
+
 }

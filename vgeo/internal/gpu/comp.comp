@@ -1,0 +1,27 @@
+#version 450
+
+struct AABB {
+    vec4 min;
+    vec4 max;
+};
+
+layout(std430, binding = 0) readonly buffer inBuffer{
+    AABB AABBin[];
+};
+
+layout(std430, binding = 1) buffer outBuffer{
+    AABB AABBout[];
+};
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;  
+
+    AABB aabbIn = AABBin[index];
+
+    AABB aabbOut = AABB(vec4(1.0), vec4(2.0));
+
+    AABBout[index] = aabbOut;
+
+}
