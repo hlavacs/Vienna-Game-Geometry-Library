@@ -1,0 +1,32 @@
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: Latest
+
+IndentWidth: 4
+IndentCaseLabels: true
+UseTab: Never
+ColumnLimit: 120
+PointerAlignment: Left
+AccessModifierOffset: -4
+
+BreakBeforeBraces: Attach
+FixNamespaceComments: false
+AlwaysBreakTemplateDeclarations: Yes
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: false
+InsertBraces: true
+
+BinPackArguments: false
+BinPackParameters: false
+InsertTrailingCommas: Wrapped
+
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<TS'
+    Priority: 2
+  - Regex: '^<'
+    Priority: 3

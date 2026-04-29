@@ -1,13 +1,13 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-#include <vector>
 #include <print>
 #include <fstream>
 #include <filesystem>
 #include <regex>
+#include <vector>
+#include <vulkan/vulkan.h>
 
-namespace vgeo {
+namespace vgeo::internal {
 
 template<typename T>
 concept BoundingVolume = requires(T bv1, T bv2){
