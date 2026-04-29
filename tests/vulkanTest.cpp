@@ -31,9 +31,9 @@ TEST_CASE( "Vulkan instance is created", "[vulkan]" ) {
 
         REQUIRE(deviceProperties.deviceName != VK_NULL_HANDLE);
         
-        vgeo::AABB testAABB = vgeo::AABB(0,0,0,99,1,1,1,99);
+        vgeo::internal::AABB testAABB = vgeo::internal::AABB(0,0,0,99,1,1,1,99);
 
-        vgeo::GpuBackend<vgeo::AABB> gpuBackend = vgeo::GpuBackend<vgeo::AABB>(physicalDevice, testAABB);
+        vgeo::internal::GpuBackend<vgeo::internal::AABB> gpuBackend = vgeo::internal::GpuBackend<vgeo::internal::AABB>(physicalDevice, testAABB);
 
         std::vector<int> testvec1 = {1,1,1};
         std::vector<int> testvec2 = {2,2,2};
