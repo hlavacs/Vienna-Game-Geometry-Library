@@ -19,6 +19,7 @@ catch_discover_tests(tests_vulkan)
 add_executable(test_cpu_shapes
     AaBoxTest.cpp
     CapsuleTest.cpp
+    ConvexHullTest.cpp
 )
 target_link_libraries(test_cpu_shapes PRIVATE Catch2::Catch2WithMain vgeo TerathonMathLibrary)
 catch_discover_tests(test_cpu_shapes)
