@@ -14,7 +14,7 @@
 
 namespace vgeo {
 
-template <internal::CollisionBackend Backend = internal::CpuBackend>
+template <internal::CollisionBackend Backend = internal::cpu::Backend>
 class CollisionSystem {
 public:
     Handle addAaBox(const AaBoxDesc& aaBox) {
@@ -61,7 +61,7 @@ private:
     Backend m_backend;
 };
 
-CollisionSystem() -> CollisionSystem<internal::CpuBackend>;
+CollisionSystem() -> CollisionSystem<internal::cpu::Backend>;
 // TODO: add GpuBackend deduction guide
 
 } // namespace vgeo
