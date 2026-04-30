@@ -30,7 +30,6 @@ find_package(Vulkan REQUIRED)
 # Library
 add_library(vgeo STATIC
     vgeo/internal/ConvexHullBuilder.cpp
-    vgeo/internal/cpu/ConvexHull.cpp
     vgeo/internal/gpu/GpuBackend.cpp
 )
 target_compile_features(vgeo PUBLIC cxx_std_26)
