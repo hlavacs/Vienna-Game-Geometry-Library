@@ -6,6 +6,8 @@
 
 #include <TSVector3D.h>
 
+#include <concepts>
+
 namespace vgeo::internal::cpu {
 
 template <BoundingVolume Bv>
@@ -21,16 +23,18 @@ public:
         return m_max;
     }
 
-    [[nodiscard]] Bv computeBv() const {
-        return {{0, 0, 0}, {0, 0, 0}};
+    [[nodiscard]] Bv computeBv() const
+        requires std::same_as<Bv, Aabb> {
+        return {m_min, m_max};
     }
 
     [[nodiscard]] Terathon::Point3D centroid() const {
-        return {0, 0, 0};
+        return {(m_min.x + m_max.x) * 0.5f, (m_min.y + m_max.y) * 0.5f, (m_min.z + m_max.z) * 0.5f};
     }
 
-    [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D) const {
-        return {0, 0, 0};
+    [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
+        return {
+            dir.x >= 0.0f ? m_max.x : m_min.x, dir.y >= 0.0f ? m_max.y : m_min.y, dir.z >= 0.0f ? m_max.z : m_min.z};
     }
 
 private:
