@@ -8,8 +8,8 @@ namespace vgeo::internal {
 
 class ConvexHullBuilder {
 public:
-    static ConvexHull buildCpu(std::span<const vgeo::Point3D> points);
-    static ConvexHull buildGpu(std::span<const vgeo::Point3D> points);
+    static cpu::ConvexHull buildCpu(std::span<const vgeo::Point3D> points);
+    static cpu::ConvexHull buildGpu(std::span<const vgeo::Point3D> points);
     ConvexHullBuilder() = delete;
 };
 

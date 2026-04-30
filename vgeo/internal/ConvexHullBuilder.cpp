@@ -368,12 +368,12 @@ HullMesh computeHull(std::span<const vgeo::Point3D> inputPoints) {
 
 namespace vgeo::internal {
 
-ConvexHull ConvexHullBuilder::buildCpu(std::span<const vgeo::Point3D> inputPoints) {
+cpu::ConvexHull ConvexHullBuilder::buildCpu(std::span<const vgeo::Point3D> inputPoints) {
     assert(inputPoints.size() >= 4);
 
     HullMesh mesh = computeHull(inputPoints);
 
-    ConvexHull hull;
+    cpu::ConvexHull hull;
     for (const Terathon::Point3D& v : mesh.vertices) {
         hull.m_vertices.emplace_back(v.x, v.y, v.z);
     }
@@ -391,7 +391,7 @@ ConvexHull ConvexHullBuilder::buildCpu(std::span<const vgeo::Point3D> inputPoint
     return hull;
 }
 
-ConvexHull ConvexHullBuilder::buildGpu(std::span<const vgeo::Point3D> inputPoints) {
+cpu::ConvexHull ConvexHullBuilder::buildGpu(std::span<const vgeo::Point3D> inputPoints) {
     // TODO: convert to GPU sided convex hull
 }
 

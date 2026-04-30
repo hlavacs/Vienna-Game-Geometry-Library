@@ -13,9 +13,9 @@
 
 #include <optional>
 
-namespace vgeo::internal {
+namespace vgeo::internal::cpu {
 
-class CpuBackend {
+class Backend {
 public:
     Handle add(const AaBoxDesc&) {
         return m_aaBoxRegistry.allocate();
@@ -87,4 +87,4 @@ private:
     HandleRegistry<ShapeType::Sphere> m_sphereRegistry;
 };
 
-} // namespace vgeo::internal
+} // namespace vgeo::internal::cpu
