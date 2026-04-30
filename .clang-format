@@ -10,6 +10,7 @@ PointerAlignment: Left
 AccessModifierOffset: -4
 
 BreakBeforeBraces: Attach
+RequiresClausePosition: OwnLineWithBrace
 FixNamespaceComments: false
 AlwaysBreakTemplateDeclarations: Yes
 AllowShortIfStatementsOnASingleLine: Never
