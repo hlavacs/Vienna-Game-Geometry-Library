@@ -6,6 +6,8 @@
 
 #include <TSVector3D.h>
 
+#include <concepts>
+
 namespace vgeo::internal::cpu {
 
 template <BoundingVolume Bv>
@@ -25,16 +27,21 @@ public:
         return m_radius;
     }
 
-    [[nodiscard]] Bv computeBv() const {
-        return {{0, 0, 0}, {0, 0, 0}};
+    [[nodiscard]] Bv computeBv() const
+        requires std::same_as<Bv, Aabb> {
+        return {
+            {std::min(m_a.x, m_b.x) - m_radius, std::min(m_a.y, m_b.y) - m_radius, std::min(m_a.z, m_b.z) - m_radius},
+            {std::max(m_a.x, m_b.x) + m_radius, std::max(m_a.y, m_b.y) + m_radius, std::max(m_a.z, m_b.z) + m_radius},
+        };
     }
 
     [[nodiscard]] Terathon::Point3D centroid() const {
-        return {0, 0, 0};
+        return {(m_a.x + m_b.x) * 0.5f, (m_a.y + m_b.y) * 0.5f, (m_a.z + m_b.z) * 0.5f};
     }
 
-    [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D) const {
-        return {0, 0, 0};
+    [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
+        Terathon::Point3D furthestEndpoint = Terathon::Dot(dir, m_a) >= Terathon::Dot(dir, m_b) ? m_a : m_b;
+        return furthestEndpoint + m_radius * dir;
     }
 
 private:
