@@ -15,6 +15,14 @@ public:
         assert(min.x <= max.x && min.y <= max.y && min.z <= max.z);
     }
 
+    [[nodiscard]] Terathon::Point3D getMin() const {
+        return m_min;
+    }
+
+    [[nodiscard]] Terathon::Point3D getMax() const {
+        return m_max;
+    }
+
     [[nodiscard]] bool intersects(const Aabb& other) const {
         return m_min.x <= other.m_max.x && m_max.x >= other.m_min.x && m_min.y <= other.m_max.y &&
                m_max.y >= other.m_min.y && m_min.z <= other.m_max.z && m_max.z >= other.m_min.z;
