@@ -6,11 +6,8 @@
 
 #include <TSVector3D.h>
 
-#include <concepts>
-
 namespace vgeo::internal::cpu {
 
-template <BoundingVolume Bv>
 class AaBox {
 public:
     AaBox(Terathon::Point3D min, Terathon::Point3D max) : m_min{min}, m_max{max} {}
@@ -23,10 +20,8 @@ public:
         return m_max;
     }
 
-    [[nodiscard]] Bv computeBv() const
-        requires std::same_as<Bv, Aabb> {
-        return {m_min, m_max};
-    }
+    template <BoundingVolume Bv>
+    [[nodiscard]] Bv computeBv() const;
 
     [[nodiscard]] Terathon::Point3D centroid() const {
         return {(m_min.x + m_max.x) * 0.5f, (m_min.y + m_max.y) * 0.5f, (m_min.z + m_max.z) * 0.5f};
@@ -42,6 +37,11 @@ private:
     Terathon::Point3D m_max;
 };
 
-static_assert(CollisionShape<AaBox<Aabb>>);
+template <>
+[[nodiscard]] inline Aabb AaBox::computeBv<Aabb>() const {
+    return {m_min, m_max};
+}
+
+static_assert(CollisionShape<AaBox, Aabb>);
 
 } // namespace vgeo::internal::cpu

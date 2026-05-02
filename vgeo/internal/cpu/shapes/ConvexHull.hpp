@@ -14,7 +14,6 @@
 
 namespace vgeo::internal::cpu {
 
-template <BoundingVolume Bv>
 class ConvexHull {
 public:
     explicit ConvexHull(internal::ConvexHullData data) {
@@ -32,16 +31,8 @@ public:
         return m_indices;
     }
 
-    [[nodiscard]] Bv computeBv() const
-        requires std::same_as<Bv, Aabb> {
-        Terathon::Point3D min = m_vertices[0];
-        Terathon::Point3D max = m_vertices[0];
-        for (const Terathon::Point3D& vertex : m_vertices) {
-            min = Terathon::Point3D{std::min(min.x, vertex.x), std::min(min.y, vertex.y), std::min(min.z, vertex.z)};
-            max = Terathon::Point3D{std::max(max.x, vertex.x), std::max(max.y, vertex.y), std::max(max.z, vertex.z)};
-        }
-        return {min, max};
-    }
+    template <BoundingVolume Bv>
+    [[nodiscard]] Bv computeBv() const;
 
     [[nodiscard]] Terathon::Point3D centroid() const {
         Terathon::Vector3D sum{0.0f, 0.0f, 0.0f};
@@ -70,6 +61,17 @@ private:
     std::vector<uint32_t> m_indices;
 };
 
-static_assert(CollisionShape<ConvexHull<Aabb>>);
+template <>
+[[nodiscard]] inline Aabb ConvexHull::computeBv<Aabb>() const {
+    Terathon::Point3D min = m_vertices[0];
+    Terathon::Point3D max = m_vertices[0];
+    for (const Terathon::Point3D& vertex : m_vertices) {
+        min = Terathon::Point3D{std::min(min.x, vertex.x), std::min(min.y, vertex.y), std::min(min.z, vertex.z)};
+        max = Terathon::Point3D{std::max(max.x, vertex.x), std::max(max.y, vertex.y), std::max(max.z, vertex.z)};
+    }
+    return {min, max};
+}
+
+static_assert(CollisionShape<ConvexHull, Aabb>);
 
 } // namespace vgeo::internal::cpu

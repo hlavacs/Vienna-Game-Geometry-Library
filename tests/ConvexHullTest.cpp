@@ -14,7 +14,7 @@ static ConvexHullData buildTetrahedron() {
 }
 
 TEST_CASE("ConvexHull centroid", "[ConvexHull]") {
-    ConvexHull<Aabb> hull{buildTetrahedron()};
+    ConvexHull hull{buildTetrahedron()};
     auto c = hull.centroid();
 
     CHECK(c.x == Approx(0.5f));
@@ -23,8 +23,8 @@ TEST_CASE("ConvexHull centroid", "[ConvexHull]") {
 }
 
 TEST_CASE("ConvexHull computeBv (Aabb)", "[ConvexHull]") {
-    ConvexHull<Aabb> hull{buildTetrahedron()};
-    auto bv = hull.computeBv();
+    ConvexHull hull{buildTetrahedron()};
+    auto bv = hull.computeBv<Aabb>();
 
     CHECK(bv.getMin().x == 0.0f);
     CHECK(bv.getMin().y == 0.0f);
@@ -35,7 +35,7 @@ TEST_CASE("ConvexHull computeBv (Aabb)", "[ConvexHull]") {
 }
 
 TEST_CASE("ConvexHull support", "[ConvexHull]") {
-    ConvexHull<Aabb> hull{buildTetrahedron()};
+    ConvexHull hull{buildTetrahedron()};
 
     auto a = hull.support({1.0f, 0.0f, 0.0f});
     CHECK(a.x == 2.0f);

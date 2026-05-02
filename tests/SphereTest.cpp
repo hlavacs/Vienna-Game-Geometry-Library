@@ -5,7 +5,7 @@
 using namespace vgeo::internal::cpu;
 
 TEST_CASE("Sphere centroid", "[Sphere]") {
-    Sphere<Aabb> sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
+    Sphere sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
     auto c = sphere.centroid();
 
     CHECK(c.x == 2.0f);
@@ -14,8 +14,8 @@ TEST_CASE("Sphere centroid", "[Sphere]") {
 }
 
 TEST_CASE("Sphere computeBv (Aabb)", "[Sphere]") {
-    Sphere<Aabb> sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
-    auto bv = sphere.computeBv();
+    Sphere sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
+    auto bv = sphere.computeBv<Aabb>();
 
     CHECK(bv.getMin().x == 1.0f);
     CHECK(bv.getMin().y == 2.0f);
@@ -26,7 +26,7 @@ TEST_CASE("Sphere computeBv (Aabb)", "[Sphere]") {
 }
 
 TEST_CASE("Sphere support", "[Sphere]") {
-    Sphere<Aabb> sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
+    Sphere sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
 
     auto a = sphere.support({1.0f, 0.0f, 0.0f});
     CHECK(a.x == 3.0f);

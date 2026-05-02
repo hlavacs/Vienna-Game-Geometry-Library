@@ -5,7 +5,7 @@
 using namespace vgeo::internal::cpu;
 
 TEST_CASE("AaBox centroid", "[AaBox]") {
-    AaBox<Aabb> box{{0.0f, 0.0f, 0.0f}, {2.0f, 4.0f, 6.0f}};
+    AaBox box{{0.0f, 0.0f, 0.0f}, {2.0f, 4.0f, 6.0f}};
     auto c = box.centroid();
 
     CHECK(c.x == 1.0f);
@@ -14,8 +14,8 @@ TEST_CASE("AaBox centroid", "[AaBox]") {
 }
 
 TEST_CASE("AaBox computeBv (Aabb)", "[AaBox]") {
-    AaBox<Aabb> box{{-1.0f, -2.0f, -3.0f}, {4.0f, 5.0f, 6.0f}};
-    auto bv = box.computeBv();
+    AaBox box{{-1.0f, -2.0f, -3.0f}, {4.0f, 5.0f, 6.0f}};
+    auto bv = box.computeBv<Aabb>();
 
     CHECK(bv.getMin().x == -1.0f);
     CHECK(bv.getMin().y == -2.0f);
@@ -26,7 +26,7 @@ TEST_CASE("AaBox computeBv (Aabb)", "[AaBox]") {
 }
 
 TEST_CASE("AaBox support along axes", "[AaBox]") {
-    AaBox<Aabb> box{{-1.0f, -2.0f, -3.0f}, {4.0f, 5.0f, 6.0f}};
+    AaBox box{{-1.0f, -2.0f, -3.0f}, {4.0f, 5.0f, 6.0f}};
 
     auto a = box.support({1.0f, 0.0f, 0.0f});
     CHECK(a.x == 4.0f);
@@ -48,7 +48,7 @@ TEST_CASE("AaBox support along axes", "[AaBox]") {
 }
 
 TEST_CASE("AaBox support diagonal", "[AaBox]") {
-    AaBox<Aabb> box{{-1.0f, -1.0f, -1.0f}, {2.0f, 2.0f, 2.0f}};
+    AaBox box{{-1.0f, -1.0f, -1.0f}, {2.0f, 2.0f, 2.0f}};
 
     auto a = box.support({1.0f, 1.0f, 1.0f});
     CHECK(a.x == 2.0f);

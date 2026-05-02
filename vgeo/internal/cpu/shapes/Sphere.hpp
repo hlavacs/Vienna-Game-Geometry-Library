@@ -12,7 +12,6 @@
 
 namespace vgeo::internal::cpu {
 
-template <BoundingVolume Bv>
 class Sphere {
 public:
     Sphere(Terathon::Point3D center, float radius)
@@ -30,14 +29,8 @@ public:
         return std::sqrt(Terathon::SquaredRadiusNorm(m_sphere));
     }
 
-    [[nodiscard]] Bv computeBv() const
-        requires std::same_as<Bv, Aabb> {
-        const float radius = getRadius();
-        return {
-            {m_sphere.x - radius, m_sphere.y - radius, m_sphere.z - radius},
-            {m_sphere.x + radius, m_sphere.y + radius, m_sphere.z + radius},
-        };
-    }
+    template <BoundingVolume Bv>
+    [[nodiscard]] Bv computeBv() const;
 
     [[nodiscard]] Terathon::Point3D centroid() const {
         return getCenter();
@@ -52,6 +45,15 @@ private:
     Terathon::Sphere3D m_sphere;
 };
 
-static_assert(CollisionShape<Sphere<Aabb>>);
+template <>
+[[nodiscard]] inline Aabb Sphere::computeBv<Aabb>() const {
+    const float radius = getRadius();
+    return {
+        {m_sphere.x - radius, m_sphere.y - radius, m_sphere.z - radius},
+        {m_sphere.x + radius, m_sphere.y + radius, m_sphere.z + radius},
+    };
+}
+
+static_assert(CollisionShape<Sphere, Aabb>);
 
 } // namespace vgeo::internal::cpu

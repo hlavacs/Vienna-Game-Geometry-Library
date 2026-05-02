@@ -15,6 +15,7 @@
 
 namespace vgeo::internal::cpu {
 
+template <typename Bv>
 class Backend {
 public:
     Handle add(const AaBoxDesc&) {
