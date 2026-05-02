@@ -8,7 +8,6 @@
 #include <TSVector3D.h>
 
 #include <cmath>
-#include <concepts>
 
 namespace vgeo::internal::cpu {
 
