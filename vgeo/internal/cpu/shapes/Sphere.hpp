@@ -43,6 +43,7 @@ public:
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
+        dir = Terathon::Normalize(dir);
         const float radius = getRadius();
         return {m_sphere.x + radius * dir.x, m_sphere.y + radius * dir.y, m_sphere.z + radius * dir.z};
     }

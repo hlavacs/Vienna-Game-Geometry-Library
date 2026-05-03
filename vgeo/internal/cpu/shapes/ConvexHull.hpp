@@ -46,6 +46,7 @@ public:
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
+        dir = Terathon::Normalize(dir);
         Terathon::Point3D furthest = m_vertices[0];
         float maxDot = Terathon::Dot(dir, furthest);
         for (const Terathon::Point3D& vertex : m_vertices) {
