@@ -11,10 +11,13 @@
 #include "vgeo/descriptors/SphereDesc.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 #include "vgeo/internal/HandleRegistry.hpp"
+#include "vgeo/internal/cpu/BruteForce.hpp"
 #include "vgeo/internal/cpu/shapes/AaBox.hpp"
 #include "vgeo/internal/cpu/shapes/Capsule.hpp"
 #include "vgeo/internal/cpu/shapes/ConvexHull.hpp"
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
+
+#include <optional>
 
 namespace vgeo::internal::cpu {
 
@@ -22,19 +25,27 @@ template <typename Bv>
 class Backend {
 public:
     Handle add(const AaBoxDesc& desc) {
-        return addShape(m_aaBoxRegistry, m_aaBoxes, AaBox{desc.min, desc.max});
+        Handle h = addShape(m_aaBoxRegistry, m_aaBoxes, AaBox{desc.min, desc.max});
+        m_broadphase.add(h, m_aaBoxes[h.getIndex()].template computeBv<Bv>());
+        return h;
     }
 
     Handle add(const CapsuleDesc& desc) {
-        return addShape(m_capsuleRegistry, m_capsules, Capsule{desc.a, desc.b, desc.radius});
+        Handle h = addShape(m_capsuleRegistry, m_capsules, Capsule{desc.a, desc.b, desc.radius});
+        m_broadphase.add(h, m_capsules[h.getIndex()].template computeBv<Bv>());
+        return h;
     }
 
     Handle add(const ConvexHullDesc& desc) {
-        return addShape(m_convexHullRegistry, m_convexHulls, ConvexHull{ConvexHullBuilder::build(desc.points)});
+        Handle h = addShape(m_convexHullRegistry, m_convexHulls, ConvexHull{ConvexHullBuilder::build(desc.points)});
+        m_broadphase.add(h, m_convexHulls[h.getIndex()].template computeBv<Bv>());
+        return h;
     }
 
     Handle add(const SphereDesc& desc) {
-        return addShape(m_sphereRegistry, m_spheres, Sphere{desc.center, desc.radius});
+        Handle h = addShape(m_sphereRegistry, m_spheres, Sphere{desc.center, desc.radius});
+        m_broadphase.add(h, m_spheres[h.getIndex()].template computeBv<Bv>());
+        return h;
     }
 
     void remove(Handle h) {
@@ -56,7 +67,11 @@ public:
                 m_sphereRegistry.free(h);
                 m_spheres[index] = Sphere{};
                 break;
+            default:
+                assert(false && "unknown ShapeType in remove()");
+                break;
         }
+        m_broadphase.remove(h);
     }
 
     bool isValid(Handle h) const {
@@ -69,11 +84,15 @@ public:
                 return m_convexHullRegistry.isValid(h);
             case ShapeType::Sphere:
                 return m_sphereRegistry.isValid(h);
+            default:
+                assert(false && "unknown ShapeType in isValid()");
+                return false;
         }
-        return false;
     }
 
     CollisionResults queryAll() const {
+        auto candidates = m_broadphase.findCandidates();
+        // TODO: narrowphase
         return {};
     }
 
@@ -94,11 +113,9 @@ private:
     Handle addShape(HandleRegistry<Type>& registry, std::vector<Shape>& storage, Shape shape) {
         Handle h = registry.allocate();
         uint32_t index = h.getIndex();
-
         if (index >= storage.size()) {
             storage.resize(index + 1);
         }
-
         storage[index] = std::move(shape);
         return h;
     }
@@ -112,6 +129,8 @@ private:
     std::vector<Capsule> m_capsules;
     std::vector<ConvexHull> m_convexHulls;
     std::vector<Sphere> m_spheres;
+
+    BruteForce<Bv> m_broadphase;
 };
 
 } // namespace vgeo::internal::cpu
