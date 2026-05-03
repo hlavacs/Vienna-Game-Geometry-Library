@@ -16,6 +16,8 @@ namespace vgeo::internal::cpu {
 
 class ConvexHull {
 public:
+    ConvexHull() = default;
+
     explicit ConvexHull(internal::ConvexHullData data) {
         for (const Point3D& v : data.vertices) {
             m_vertices.emplace_back(v.x, v.y, v.z);

@@ -10,6 +10,8 @@ namespace vgeo::internal::cpu {
 
 class AaBox {
 public:
+    AaBox() = default;
+
     AaBox(Terathon::Point3D min, Terathon::Point3D max) : m_min{min}, m_max{max} {}
 
     [[nodiscard]] Terathon::Point3D getMin() const {

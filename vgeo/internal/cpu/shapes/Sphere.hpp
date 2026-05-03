@@ -13,6 +13,8 @@ namespace vgeo::internal::cpu {
 
 class Sphere {
 public:
+    Sphere() = default;
+
     Sphere(Terathon::Point3D center, float radius)
         : m_sphere{-1.0f, center.x, center.y, center.z, -(Terathon::SquaredMag(center) - radius * radius) * 0.5f} {}
 

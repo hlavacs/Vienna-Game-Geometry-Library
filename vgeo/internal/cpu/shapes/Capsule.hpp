@@ -11,6 +11,8 @@ namespace vgeo::internal::cpu {
 
 class Capsule {
 public:
+    Capsule() = default;
+
     Capsule(Terathon::Point3D a, Terathon::Point3D b, float radius) : m_a{a}, m_b{b}, m_radius{radius} {}
 
     [[nodiscard]] Terathon::Point3D getA() const {
