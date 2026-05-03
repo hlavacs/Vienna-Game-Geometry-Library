@@ -1,11 +1,9 @@
 #pragma once
 
+#include <TSVector3D.h>
+
 namespace vgeo {
 
-struct Point3D {
-    float x;
-    float y;
-    float z;
-};
+using Point3D = Terathon::Point3D;
 
 } // namespace vgeo
