@@ -9,15 +9,19 @@
 #include "vgeo/descriptors/CapsuleDesc.hpp"
 #include "vgeo/descriptors/ConvexHullDesc.hpp"
 #include "vgeo/descriptors/SphereDesc.hpp"
+#include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 #include "vgeo/internal/HandleRegistry.hpp"
 #include "vgeo/internal/cpu/BruteForce.hpp"
+#include "vgeo/internal/cpu/narrowphase/NarrowPhase.hpp"
 #include "vgeo/internal/cpu/shapes/AaBox.hpp"
 #include "vgeo/internal/cpu/shapes/Capsule.hpp"
 #include "vgeo/internal/cpu/shapes/ConvexHull.hpp"
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
 
 #include <optional>
+#include <variant>
+#include <vector>
 
 namespace vgeo::internal::cpu {
 
@@ -91,9 +95,28 @@ public:
     }
 
     CollisionResults queryAll() const {
-        auto candidates = m_broadphase.findCandidates();
-        // TODO: narrowphase
-        return {};
+        CollisionResults results;
+        std::vector<CandidatePair> candidates = m_broadphase.findCandidates();
+
+        for (auto [handleA, handleB] : candidates) {
+            if (handleA.getType() > handleB.getType()) {
+                std::swap(handleA, handleB);
+            }
+
+            Shape shapeA = getShape(handleA);
+            Shape shapeB = getShape(handleB);
+
+            std::optional<CollisionPair> result = std::visit(
+                [&](const auto& shapeA, const auto& shapeB) { return collide(handleA, shapeA, handleB, shapeB); },
+                shapeA,
+                shapeB);
+
+            if (result) {
+                results.pairs.push_back(std::move(*result));
+            }
+        }
+
+        return results;
     }
 
     std::optional<CollisionPair> queryPair(Handle, Handle) const {
@@ -109,6 +132,24 @@ public:
     }
 
 private:
+    using Shape = std::variant<AaBox, Capsule, Sphere, ConvexHull>;
+
+    Shape getShape(Handle h) const {
+        switch (h.getType()) {
+            case ShapeType::AaBox:
+                return m_aaBoxes[h.getIndex()];
+            case ShapeType::Capsule:
+                return m_capsules[h.getIndex()];
+            case ShapeType::Sphere:
+                return m_spheres[h.getIndex()];
+            case ShapeType::ConvexHull:
+                return m_convexHulls[h.getIndex()];
+            default:
+                assert(false && "unknown ShapeType in getShape()");
+                return AaBox{};
+        }
+    }
+
     template <typename Shape, ShapeType Type>
     Handle addShape(HandleRegistry<Type>& registry, std::vector<Shape>& storage, Shape shape) {
         Handle h = registry.allocate();
