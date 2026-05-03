@@ -9,7 +9,7 @@ namespace vgeo::internal {
 
 class ConvexHullBuilder {
 public:
-    static ConvexHullData build(std::span<const vgeo::Point3D> points);
+    static ConvexHullData build(std::span<const Point3D> points);
     ConvexHullBuilder() = delete;
 };
 

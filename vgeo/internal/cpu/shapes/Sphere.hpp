@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vgeo/Point3D.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
@@ -15,8 +16,12 @@ class Sphere {
 public:
     Sphere() = default;
 
-    Sphere(Terathon::Point3D center, float radius)
-        : m_sphere{-1.0f, center.x, center.y, center.z, -(Terathon::SquaredMag(center) - radius * radius) * 0.5f} {}
+    Sphere(Point3D center, float radius)
+        : m_sphere{-1.0f,
+                   center.x,
+                   center.y,
+                   center.z,
+                   -(Terathon::SquaredMag(Terathon::Point3D{center.x, center.y, center.z}) - radius * radius) * 0.5f} {}
 
     [[nodiscard]] Terathon::Sphere3D getSphere() const {
         return m_sphere;

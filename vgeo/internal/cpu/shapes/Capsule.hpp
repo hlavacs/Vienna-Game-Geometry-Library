@@ -1,4 +1,5 @@
 #pragma once
+#include "vgeo/Point3D.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
@@ -13,7 +14,7 @@ class Capsule {
 public:
     Capsule() = default;
 
-    Capsule(Terathon::Point3D a, Terathon::Point3D b, float radius) : m_a{a}, m_b{b}, m_radius{radius} {}
+    Capsule(Point3D a, Point3D b, float radius) : m_a{a.x, a.y, a.z}, m_b{b.x, b.y, b.z}, m_radius{radius} {}
 
     [[nodiscard]] Terathon::Point3D getA() const {
         return m_a;

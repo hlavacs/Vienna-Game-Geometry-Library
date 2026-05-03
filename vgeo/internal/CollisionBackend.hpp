@@ -2,7 +2,9 @@
 
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/Handle.hpp"
+#include "vgeo/Point3D.hpp"
 #include "vgeo/RayResult.hpp"
+#include "vgeo/Vector3D.hpp"
 #include "vgeo/descriptors/AaBoxDesc.hpp"
 #include "vgeo/descriptors/CapsuleDesc.hpp"
 #include "vgeo/descriptors/ConvexHullDesc.hpp"

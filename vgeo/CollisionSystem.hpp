@@ -2,12 +2,15 @@
 
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/Handle.hpp"
+#include "vgeo/Point3D.hpp"
 #include "vgeo/RayResult.hpp"
 #include "vgeo/UserPolicy.hpp"
+#include "vgeo/Vector3D.hpp"
 #include "vgeo/descriptors/AaBoxDesc.hpp"
 #include "vgeo/descriptors/CapsuleDesc.hpp"
 #include "vgeo/descriptors/ConvexHullDesc.hpp"
 #include "vgeo/descriptors/SphereDesc.hpp"
+#include "vgeo/internal/CollisionBackend.hpp"
 #include "vgeo/internal/cpu/Backend.hpp"
 
 #include <optional>
@@ -71,5 +74,7 @@ private:
     // std::variant<internal::cpu::Backend<Bv>, internal::gpu::Backend>
     internal::cpu::Backend<Bv> m_backend;
 };
+
+static_assert(internal::CollisionBackend<internal::cpu::Backend<Aabb>>);
 
 } // namespace vgeo

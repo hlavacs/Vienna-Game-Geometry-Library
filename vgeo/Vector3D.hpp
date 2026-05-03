@@ -1,9 +1,11 @@
 #pragma once
 
-#include <TSVector3D.h>
-
 namespace vgeo {
 
-using Vector3D = Terathon::Vector3D;
+struct Vector3D {
+    float x;
+    float y;
+    float z;
+};
 
 } // namespace vgeo
