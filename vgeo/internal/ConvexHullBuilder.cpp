@@ -1,7 +1,7 @@
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 
 #include "vgeo/Point3D.hpp"
-#include "vgeo/internal/cpu/ConvexHull.hpp"
+#include "vgeo/internal/ConvexHullData.hpp"
 
 #include <TSRigid3D.h>
 #include <TSVector3D.h>
@@ -368,31 +368,27 @@ HullMesh computeHull(std::span<const vgeo::Point3D> inputPoints) {
 
 namespace vgeo::internal {
 
-ConvexHull ConvexHullBuilder::buildCpu(std::span<const vgeo::Point3D> inputPoints) {
+ConvexHullData ConvexHullBuilder::build(std::span<const vgeo::Point3D> inputPoints) {
     assert(inputPoints.size() >= 4);
 
     HullMesh mesh = computeHull(inputPoints);
 
-    ConvexHull hull;
+    ConvexHullData hull;
     for (const Terathon::Point3D& v : mesh.vertices) {
-        hull.m_vertices.emplace_back(v.x, v.y, v.z);
+        hull.vertices.emplace_back(v.x, v.y, v.z);
     }
     for (const Face& f : mesh.faces) {
         if (!f.onHull) {
             continue;
         }
         uint32_t he = f.halfEdge;
-        hull.m_indices.emplace_back(mesh.halfEdges[he].origin);
+        hull.indices.emplace_back(mesh.halfEdges[he].origin);
         he = mesh.halfEdges[he].next;
-        hull.m_indices.emplace_back(mesh.halfEdges[he].origin);
+        hull.indices.emplace_back(mesh.halfEdges[he].origin);
         he = mesh.halfEdges[he].next;
-        hull.m_indices.emplace_back(mesh.halfEdges[he].origin);
+        hull.indices.emplace_back(mesh.halfEdges[he].origin);
     }
     return hull;
-}
-
-ConvexHull ConvexHullBuilder::buildGpu(std::span<const vgeo::Point3D> inputPoints) {
-    // TODO: convert to GPU sided convex hull
 }
 
 } // namespace vgeo::internal

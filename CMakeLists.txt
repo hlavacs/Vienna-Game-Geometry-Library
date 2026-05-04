@@ -30,13 +30,12 @@ find_package(Vulkan REQUIRED)
 # Library
 add_library(vgeo STATIC
     vgeo/internal/ConvexHullBuilder.cpp
-    vgeo/internal/cpu/ConvexHull.cpp
     vgeo/internal/gpu/GpuBackend.cpp
     vgeo/internal/gpu/VulkanHandler.cpp
 )
 target_compile_features(vgeo PUBLIC cxx_std_26)
 target_include_directories(vgeo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(vgeo PRIVATE TerathonMathLibrary)
+target_link_libraries(vgeo PUBLIC TerathonMathLibrary)
 
 target_link_libraries(vgeo PUBLIC Vulkan::Vulkan)
 
@@ -44,7 +43,7 @@ target_link_libraries(vgeo PUBLIC Vulkan::Vulkan)
 if(PROJECT_IS_TOP_LEVEL)
     add_executable(demo examples/demo.cpp)
     set_target_properties(demo PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    target_link_libraries(demo PRIVATE vgeo)
+    target_link_libraries(demo PUBLIC vgeo)
 
     if(WIN32)
         target_link_libraries(demo PRIVATE stdc++exp)

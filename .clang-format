@@ -2,14 +2,16 @@ BasedOnStyle: LLVM
 Language: Cpp
 Standard: Latest
 
+# Indentation
 IndentWidth: 4
 IndentCaseLabels: true
-UseTab: Never
-ColumnLimit: 120
-PointerAlignment: Left
 AccessModifierOffset: -4
+PointerAlignment: Left
+ColumnLimit: 120
 
+# Braces and line wrapping
 BreakBeforeBraces: Attach
+RequiresClausePosition: OwnLineWithBrace
 FixNamespaceComments: false
 AlwaysBreakTemplateDeclarations: Yes
 AllowShortIfStatementsOnASingleLine: Never
@@ -17,10 +19,12 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortLoopsOnASingleLine: false
 InsertBraces: true
 
+# Arguments and parameters
 BinPackArguments: false
 BinPackParameters: false
 InsertTrailingCommas: Wrapped
 
+# Include sorting
 SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:

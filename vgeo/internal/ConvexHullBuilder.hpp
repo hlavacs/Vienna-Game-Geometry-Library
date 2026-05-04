@@ -1,15 +1,15 @@
 #pragma once
 
+#include "vgeo/Point3D.hpp"
+#include "vgeo/internal/ConvexHullData.hpp"
+
 #include <span>
-#include <vgeo/Point3D.hpp>
-#include <vgeo/internal/cpu/ConvexHull.hpp>
 
 namespace vgeo::internal {
 
 class ConvexHullBuilder {
 public:
-    static ConvexHull buildCpu(std::span<const vgeo::Point3D> points);
-    static ConvexHull buildGpu(std::span<const vgeo::Point3D> points);
+    static ConvexHullData build(std::span<const Point3D> points);
     ConvexHullBuilder() = delete;
 };
 
