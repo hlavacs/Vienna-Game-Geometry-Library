@@ -2,6 +2,7 @@
 
 #include<vulkan/vulkan.h>
 #include <vgeo/internal/gpu/GpuBackend.hpp>
+#include <vgeo/internal/gpu/VulkanHandler.hpp>
 
 TEST_CASE( "Vulkan instance is created", "[vulkan]" ) {
         // Create a Vulkan instance
@@ -31,9 +32,9 @@ TEST_CASE( "Vulkan instance is created", "[vulkan]" ) {
 
         REQUIRE(deviceProperties.deviceName != VK_NULL_HANDLE);
         
-        vgeo::internal::AABB testAABB = vgeo::internal::AABB(0,0,0,99,1,1,1,99);
+        vgeo::internal::gpu::AABB testAABB = vgeo::internal::gpu::AABB(0,0,0,99,1,1,1,99);
 
-        vgeo::internal::GpuBackend<vgeo::internal::AABB> gpuBackend = vgeo::internal::GpuBackend<vgeo::internal::AABB>(physicalDevice, testAABB);
+        vgeo::internal::gpu::GpuBackend<vgeo::internal::gpu::AABB> gpuBackend = vgeo::internal::gpu::GpuBackend<vgeo::internal::gpu::AABB>(physicalDevice, testAABB);
 
         std::vector<int> testvec1 = {1,1,1};
         std::vector<int> testvec2 = {2,2,2};
@@ -45,7 +46,6 @@ TEST_CASE( "Vulkan instance is created", "[vulkan]" ) {
         REQUIRE(gpuBackend.m_boundingVolume.maxx == 2);
         REQUIRE(gpuBackend.m_boundingVolume.maxy == 2);
         REQUIRE(gpuBackend.m_boundingVolume.maxz == 2);
-
 
         // Destroy the Vulkan instance
         vkDestroyInstance(instance, nullptr);

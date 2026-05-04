@@ -32,6 +32,7 @@ add_library(vgeo STATIC
     vgeo/internal/ConvexHullBuilder.cpp
     vgeo/internal/cpu/ConvexHull.cpp
     vgeo/internal/gpu/GpuBackend.cpp
+    vgeo/internal/gpu/VulkanHandler.cpp
 )
 target_compile_features(vgeo PUBLIC cxx_std_26)
 target_include_directories(vgeo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -52,5 +53,6 @@ if(PROJECT_IS_TOP_LEVEL)
 
     enable_testing()
     add_subdirectory(tests)
+    add_subdirectory(vgeo/internal/gpu/shaders)
 
 endif()

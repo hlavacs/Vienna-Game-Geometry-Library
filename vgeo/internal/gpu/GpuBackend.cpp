@@ -1,6 +1,6 @@
 #include <vgeo/internal/gpu/GpuBackend.hpp>
 
-namespace vgeo::internal {
+namespace vgeo::internal::gpu {
 
     
     /*

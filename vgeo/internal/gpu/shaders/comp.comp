@@ -20,7 +20,9 @@ void main() {
 
     AABB aabbIn = AABBin[index];
 
-    AABB aabbOut = AABB(vec4(1.0), vec4(2.0));
+    AABB aabbOut = AABB(vec4(0.0), vec4(1.0));
+    aabbOut.min = aabbIn.min + vec4(1.0);
+    aabbOut.max = aabbIn.max + vec4(1.0);
 
     AABBout[index] = aabbOut;
 
