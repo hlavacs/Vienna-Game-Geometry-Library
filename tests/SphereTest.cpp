@@ -1,8 +1,10 @@
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
+#include "catch2/catch_approx.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
 using namespace vgeo::internal::cpu;
+using Catch::Approx;
 
 TEST_CASE("Sphere centroid", "[Sphere]") {
     Sphere sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
@@ -29,14 +31,14 @@ TEST_CASE("Sphere support", "[Sphere]") {
     Sphere sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
 
     auto a = sphere.support({1.0f, 0.0f, 0.0f});
-    CHECK(a.x == 3.0f);
+    CHECK(a.x == Approx(3.0f));
 
     auto b = sphere.support({-1.0f, 0.0f, 0.0f});
-    CHECK(b.x == 1.0f);
+    CHECK(b.x == Approx(1.0f));
 
     auto c = sphere.support({0.0f, 1.0f, 0.0f});
-    CHECK(c.y == 4.0f);
+    CHECK(c.y == Approx(4.0f));
 
     auto d = sphere.support({0.0f, -1.0f, 0.0f});
-    CHECK(d.y == 2.0f);
+    CHECK(d.y == Approx(2.0f));
 }
