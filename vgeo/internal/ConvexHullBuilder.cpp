@@ -242,14 +242,16 @@ HorizonResult findHorizon(const HullMesh& mesh, uint32_t seedFace, const Teratho
         for (int i = 0; i < 3; ++i) {
             uint32_t twinHe = mesh.halfEdges[he].twin;
             uint32_t twinFace = mesh.halfEdges[twinHe].face;
+            float dist = Terathon::Antiwedge(eye, mesh.faces[twinFace].plane);
 
-            if (!visited[twinFace]) {
-                visited[twinFace] = true;
-                if (Terathon::Antiwedge(eye, mesh.faces[twinFace].plane) > epsilon) {
+            if (dist > epsilon) {
+                if (!visited[twinFace]) {
+                    visited[twinFace] = true;
                     stack.emplace_back(twinFace);
-                } else {
-                    result.horizon.emplace_back(twinHe);
                 }
+            } else {
+                visited[twinFace] = true;
+                result.horizon.emplace_back(twinHe);
             }
 
             he = mesh.halfEdges[he].next;
@@ -374,19 +376,35 @@ ConvexHullData ConvexHullBuilder::build(std::span<const vgeo::Point3D> inputPoin
     HullMesh mesh = computeHull(inputPoints);
 
     ConvexHullData hull;
-    for (const Terathon::Point3D& v : mesh.vertices) {
-        hull.vertices.emplace_back(v.x, v.y, v.z);
-    }
+    std::vector<uint32_t> vertexRemap(mesh.vertices.size(), invalid);
     for (const Face& f : mesh.faces) {
         if (!f.onHull) {
             continue;
         }
         uint32_t he = f.halfEdge;
-        hull.indices.emplace_back(mesh.halfEdges[he].origin);
+        uint32_t v0 = mesh.halfEdges[he].origin;
+        if (vertexRemap[v0] == invalid) {
+            vertexRemap[v0] = static_cast<uint32_t>(hull.vertices.size());
+            const Terathon::Point3D& vertex = mesh.vertices[v0];
+            hull.vertices.emplace_back(vertex.x, vertex.y, vertex.z);
+        }
+        hull.indices.emplace_back(vertexRemap[v0]);
         he = mesh.halfEdges[he].next;
-        hull.indices.emplace_back(mesh.halfEdges[he].origin);
+        uint32_t v1 = mesh.halfEdges[he].origin;
+        if (vertexRemap[v1] == invalid) {
+            vertexRemap[v1] = static_cast<uint32_t>(hull.vertices.size());
+            const Terathon::Point3D& vertex = mesh.vertices[v1];
+            hull.vertices.emplace_back(vertex.x, vertex.y, vertex.z);
+        }
+        hull.indices.emplace_back(vertexRemap[v1]);
         he = mesh.halfEdges[he].next;
-        hull.indices.emplace_back(mesh.halfEdges[he].origin);
+        uint32_t v2 = mesh.halfEdges[he].origin;
+        if (vertexRemap[v2] == invalid) {
+            vertexRemap[v2] = static_cast<uint32_t>(hull.vertices.size());
+            const Terathon::Point3D& vertex = mesh.vertices[v2];
+            hull.vertices.emplace_back(vertex.x, vertex.y, vertex.z);
+        }
+        hull.indices.emplace_back(vertexRemap[v2]);
     }
     return hull;
 }
