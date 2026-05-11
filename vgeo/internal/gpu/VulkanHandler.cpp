@@ -48,7 +48,7 @@ uint32_t VulkanHandler::findComputeQueueFamilyIndex(){
     return result;
 }
 
-VulkanHandler::VulkanHandler(VkPhysicalDevice physicalDevice){
+VulkanHandler::VulkanHandler(VkPhysicalDevice& physicalDevice){
     m_physicalDevice = physicalDevice;
     m_computeQueueFamilyIndex = findComputeQueueFamilyIndex();
 }
@@ -99,11 +99,19 @@ void VulkanHandler::createDescriptorSetLayouts(){
     }
 }
 
+void VulkanHandler::createPushConstantRange(){
+    m_pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    m_pushConstantRange.offset = 0;
+    m_pushConstantRange.size = sizeof(uint32_t);
+}
+
 void VulkanHandler::createPipelineLayout(){
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &m_pushConstantRange;
 
     if (vkCreatePipelineLayout(m_logicalDevice, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create compute pipeline layout!");
@@ -250,9 +258,9 @@ void VulkanHandler::createInputStorageBuffers(void* inputData, VkDeviceSize inpu
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-
     createBuffer(inputDataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    
     void* data;
     vkMapMemory(m_logicalDevice, stagingBufferMemory, 0, inputDataSize, 0, &data);
     memcpy(data, inputData, (size_t)inputDataSize);
@@ -368,10 +376,12 @@ void VulkanHandler::runComputeShader(void* result){
         throw std::runtime_error("failed to begin recording command buffer!");
     }
     
+    vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &m_inputStorageBufferSizes[0]);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipeline);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayout, 0, 1, &m_descriptorSets[0], 0, 0);
     
-    vkCmdDispatch(commandBuffer, 1, 1, 1);
+    uint32_t groupCount = (m_inputStorageBufferSizes[0] + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
+    vkCmdDispatch(commandBuffer, groupCount, 1, 1);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");

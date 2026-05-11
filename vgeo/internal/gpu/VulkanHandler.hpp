@@ -9,12 +9,14 @@
 namespace vgeo::internal::gpu {
 
 class VulkanHandler{
+    const uint32_t SHADER_LOCAL_SIZE_X = 64;
 
     VkPhysicalDevice m_physicalDevice;
     uint32_t m_computeQueueFamilyIndex;
     VkDevice m_logicalDevice;
     VkQueue m_computeQueue;
     VkDescriptorSetLayout m_descriptorSetLayout;
+    VkPushConstantRange m_pushConstantRange;
     VkPipelineLayout m_pipelineLayout;
     VkPipeline m_computePipeline;
     VkCommandPool m_commandPool;
@@ -28,10 +30,10 @@ class VulkanHandler{
     std::vector<VkDescriptorSet> m_descriptorSets;
 
     public:
-        VulkanHandler() = default;
-        VulkanHandler(VkPhysicalDevice physicalDevice);
+        VulkanHandler(VkPhysicalDevice& physicalDevice);
         void createLogicalDevice();
         void createDescriptorSetLayouts();
+        void createPushConstantRange();
         void createPipelineLayout();
         void createComputePipeline(const std::string& filename);
         void createCommandPool();
