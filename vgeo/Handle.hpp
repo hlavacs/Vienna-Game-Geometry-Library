@@ -11,28 +11,28 @@ class HandleRegistry;
 
 namespace vgeo {
 
-// Handle encodes three fields into a single uint32_t:
+// Handle encodes three fields into a single uint64_t:
 //
-// bits  0-19 : index       20b - max 1,048,576
-// bits 20-27 : generation   8b - starts at 1, wraps to 0 = retired
-// bits 28-31 : type         4b - ShapeType enum value
+// bits  0-31 : index       32b - max 4,294,967,296
+// bits 32-59 : generation  28b - max   268,435,456
+// bits 60-63 : type         4b - max            16
 class Handle {
 public:
     Handle() = delete;
 
     uint32_t getIndex() const noexcept {
-        return m_id & 0x000F'FFFFu;
+        return static_cast<uint32_t>(m_id & 0xFFFF'FFFFu);
     }
 
-    uint8_t getGeneration() const noexcept {
-        return (m_id >> 20) & 0xFFu;
+    uint32_t getGeneration() const noexcept {
+        return static_cast<uint32_t>((m_id >> 32) & 0x0FFF'FFFFu);
     }
 
     ShapeType getType() const noexcept {
-        return static_cast<ShapeType>((m_id >> 28) & 0xFu);
+        return static_cast<ShapeType>((m_id >> 60) & 0x0Fu);
     }
 
-    uint32_t getId() const noexcept {
+    uint64_t getId() const noexcept {
         return m_id;
     }
 
@@ -42,9 +42,9 @@ private:
     template <ShapeType Type>
     friend class internal::HandleRegistry;
 
-    explicit Handle(uint32_t id) noexcept : m_id(id) {}
+    explicit Handle(uint64_t id) noexcept : m_id(id) {}
 
-    uint32_t m_id;
+    uint64_t m_id;
 };
 
 } // namespace vgeo
