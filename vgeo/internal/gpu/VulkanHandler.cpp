@@ -1,3 +1,4 @@
+#include <cstring>
 #include <vgeo/internal/gpu/VulkanHandler.hpp>
 
 namespace vgeo::internal::gpu{
@@ -14,7 +15,7 @@ static std::vector<char> readFile(const std::string& filename) {
     if (std::regex_search(input, match, re)) {
         globalPath = match.str() + localPath;
     }
-    
+
     std::ifstream file(globalPath, std::ios::ate | std::ios::binary);
 
     if (!file.is_open()) {
@@ -82,7 +83,7 @@ void VulkanHandler::createDescriptorSetLayouts(){
     layoutBindings[0].pImmutableSamplers = nullptr;
     layoutBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-            
+
     layoutBindings[1].binding = 1;
     layoutBindings[1].descriptorCount = 1;
     layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -258,9 +259,9 @@ void VulkanHandler::createInputStorageBuffers(void* inputData, VkDeviceSize inpu
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    createBuffer(inputDataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | 
+    createBuffer(inputDataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
         VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-    
+
     void* data;
     vkMapMemory(m_logicalDevice, stagingBufferMemory, 0, inputDataSize, 0, &data);
     memcpy(data, inputData, (size_t)inputDataSize);
@@ -269,9 +270,9 @@ void VulkanHandler::createInputStorageBuffers(void* inputData, VkDeviceSize inpu
     VkBuffer shaderStorageBuffer;
     VkDeviceMemory shaderStorageBufferMemory;
 
-    createBuffer(inputDataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+    createBuffer(inputDataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, shaderStorageBuffer, shaderStorageBufferMemory);
-    
+
     copyBuffer(stagingBuffer, shaderStorageBuffer, inputDataSize);
     m_inputStorageBuffers.push_back(shaderStorageBuffer);
     m_inputStorageBufferMemories.push_back(shaderStorageBufferMemory);
@@ -284,7 +285,7 @@ void VulkanHandler::createInputStorageBuffers(void* inputData, VkDeviceSize inpu
 
 void VulkanHandler::createOutputStorageBuffer(VkDeviceSize outputDataSize){
 
-    createBuffer(outputDataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+    createBuffer(outputDataSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, m_outputBuffer, m_outputBufferMemory);
 
     m_outputBufferSize = outputDataSize;
@@ -317,7 +318,7 @@ void VulkanHandler::createDescriptorSets() {
     allocInfo.descriptorPool = m_descriptorPool;
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &m_descriptorSetLayout;
-    
+
     m_descriptorSets.resize(1);
     if (vkAllocateDescriptorSets(m_logicalDevice, &allocInfo, m_descriptorSets.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate descriptor sets!");
@@ -337,7 +338,7 @@ void VulkanHandler::createDescriptorSets() {
     descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descriptorWrites[0].descriptorCount = 1;
     descriptorWrites[0].pBufferInfo = &inputStoragebufferInfo;
-    
+
     uint32_t outputBufferIndex = m_inputStorageBuffers.size();
 
     VkDescriptorBufferInfo outputBufferInfo{};
@@ -375,18 +376,18 @@ void VulkanHandler::runComputeShader(void* result){
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
-    
+
     vkCmdPushConstants(commandBuffer, m_pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &m_inputStorageBufferSizes[0]);
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_computePipeline);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipelineLayout, 0, 1, &m_descriptorSets[0], 0, 0);
-    
+
     uint32_t groupCount = (m_inputStorageBufferSizes[0] + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
     vkCmdDispatch(commandBuffer, groupCount, 1, 1);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
-    
+
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
@@ -397,7 +398,7 @@ void VulkanHandler::runComputeShader(void* result){
         throw std::runtime_error("failed to submit compute command buffer!");
     };
     vkQueueWaitIdle(m_computeQueue);
-    
+
     void* mapped;
     vkMapMemory(m_logicalDevice, m_outputBufferMemory, 0, m_outputBufferSize, 0, &mapped);
 
