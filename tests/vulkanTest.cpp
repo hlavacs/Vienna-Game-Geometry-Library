@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include<vulkan/vulkan.h>
-#include <vgeo/internal/gpu/GpuBackend.hpp>
+#include "vgeo/internal/gpu/GpuBackend.hpp"
 
 TEST_CASE( "Vulkan instance is created", "[vulkan]" ) {
         // Create a Vulkan instance
@@ -31,22 +31,33 @@ TEST_CASE( "Vulkan instance is created", "[vulkan]" ) {
 
         REQUIRE(deviceProperties.deviceName != VK_NULL_HANDLE);
         
-        vgeo::internal::AABB testAABB = vgeo::internal::AABB(0,0,0,99,1,1,1,99);
+        vgeo::AaBoxDesc testBox = vgeo::AaBoxDesc({0,0,0}, {1,1,1});
+        vgeo::AaBoxDesc testBox2 = vgeo::AaBoxDesc({2,2,2}, {3,3,3});
 
-        vgeo::internal::GpuBackend<vgeo::internal::AABB> gpuBackend = vgeo::internal::GpuBackend<vgeo::internal::AABB>(physicalDevice, testAABB);
+        vgeo::internal::gpu::GpuBackend<vgeo::internal::gpu::AABB> gpuBackend = vgeo::internal::gpu::GpuBackend<vgeo::internal::gpu::AABB>(physicalDevice);
+        gpuBackend.add(testBox);
+        gpuBackend.add(testBox2);
+        gpuBackend.queryBoxes();
 
         std::vector<int> testvec1 = {1,1,1};
         std::vector<int> testvec2 = {2,2,2};
 
         REQUIRE(gpuBackend.test == 1);
-        REQUIRE(gpuBackend.m_boundingVolume.minx == 1);
-        REQUIRE(gpuBackend.m_boundingVolume.miny == 1);
-        REQUIRE(gpuBackend.m_boundingVolume.minz == 1);
-        REQUIRE(gpuBackend.m_boundingVolume.maxx == 2);
-        REQUIRE(gpuBackend.m_boundingVolume.maxy == 2);
-        REQUIRE(gpuBackend.m_boundingVolume.maxz == 2);
-
-
+        REQUIRE(gpuBackend.m_testBoxes[0].min_x == 1);
+        REQUIRE(gpuBackend.m_testBoxes[0].min_y == 1);
+        REQUIRE(gpuBackend.m_testBoxes[0].min_z == 1);
+        REQUIRE(gpuBackend.m_testBoxes[0].max_x == 2);
+        REQUIRE(gpuBackend.m_testBoxes[0].max_y == 2);
+        REQUIRE(gpuBackend.m_testBoxes[0].max_z == 2);
+        
+        REQUIRE(gpuBackend.m_testBoxes[1].min_x == 3);
+        REQUIRE(gpuBackend.m_testBoxes[1].min_y == 3);
+        REQUIRE(gpuBackend.m_testBoxes[1].min_z == 3);
+        REQUIRE(gpuBackend.m_testBoxes[1].max_x == 4);
+        REQUIRE(gpuBackend.m_testBoxes[1].max_y == 4);
+        REQUIRE(gpuBackend.m_testBoxes[1].max_z == 4);
+        
         // Destroy the Vulkan instance
         vkDestroyInstance(instance, nullptr);
+
 }
