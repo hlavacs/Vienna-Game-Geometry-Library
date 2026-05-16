@@ -40,9 +40,21 @@ target_link_libraries(vgeo PUBLIC Vulkan::Vulkan)
 
 # Examples and tests
 if(PROJECT_IS_TOP_LEVEL)
+    FetchContent_Declare(
+        raylib
+        GIT_REPOSITORY https://github.com/raysan5/raylib.git
+        GIT_TAG        6.0
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(raylib)
+
     add_executable(demo examples/demo.cpp)
     set_target_properties(demo PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    target_link_libraries(demo PUBLIC vgeo)
+    target_link_libraries(demo PRIVATE vgeo)
+
+    add_executable(visualizer examples/visualizer.cpp)
+    set_target_properties(visualizer PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    target_link_libraries(visualizer PRIVATE vgeo raylib)
 
     if(WIN32)
         target_link_libraries(demo PRIVATE stdc++exp)
@@ -51,6 +63,5 @@ if(PROJECT_IS_TOP_LEVEL)
 
     enable_testing()
     add_subdirectory(tests)
-    add_subdirectory(vgeo/internal/gpu/shaders)
 
 endif()
