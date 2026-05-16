@@ -17,15 +17,35 @@ inline bool isSameDirection(const Terathon::Vector3D& a, const Terathon::Vector3
     return Terathon::Dot(a, b) > 0.0f;
 }
 
+template <typename ShapeA, typename ShapeB>
+inline Terathon::Vector3D minkowskiSupport(const ShapeA& shapeA, const ShapeB& shapeB, Terathon::Vector3D dir) {
+    auto supportA = shapeA.support(dir);
+    auto supportB = shapeB.support(-dir);
+    return {supportA.x - supportB.x, supportA.y - supportB.y, supportA.z - supportB.z};
+}
+
 struct Simplex {
     std::array<Terathon::Vector3D, 4> points;
+    std::array<Terathon::Point3D, 4> supportPointsA; // Support points on shape A
+    std::array<Terathon::Point3D, 4> supportPointsB; // Support points on shape B
     int size = 0;
 
-    void pushFront(Terathon::Vector3D p) {
+    void pushFront(Terathon::Vector3D p, Terathon::Point3D pA, Terathon::Point3D pB) {
         points[3] = points[2];
         points[2] = points[1];
         points[1] = points[0];
         points[0] = p;
+
+        supportPointsA[3] = supportPointsA[2];
+        supportPointsA[2] = supportPointsA[1];
+        supportPointsA[1] = supportPointsA[0];
+        supportPointsA[0] = pA;
+
+        supportPointsB[3] = supportPointsB[2];
+        supportPointsB[2] = supportPointsB[1];
+        supportPointsB[1] = supportPointsB[0];
+        supportPointsB[0] = pB;
+
         size = std::min(size + 1, 4);
     }
 
@@ -45,7 +65,7 @@ struct Simplex {
         if (isSameDirection(ab, ao)) {
             dir = Terathon::Cross(Terathon::Cross(ab, ao), ab);
         } else {
-            set({a});
+            set({points[0]});
             dir = ao;
         }
         return false;
@@ -62,20 +82,20 @@ struct Simplex {
 
         if (isSameDirection(Terathon::Cross(abc, ac), ao)) {
             if (isSameDirection(ac, ao)) {
-                set({a, c});
+                set({points[0], points[2]});
                 dir = Terathon::Cross(Terathon::Cross(ac, ao), ac);
             } else {
-                set({a, b});
+                set({points[0], points[1]});
                 return lineCase(dir);
             }
         } else if (isSameDirection(Terathon::Cross(ab, abc), ao)) {
-            set({a, b});
+            set({points[0], points[1]});
             return lineCase(dir);
         } else if (isSameDirection(abc, ao)) {
             dir = abc;
         } else {
             // flip winding so normal points toward origin
-            set({a, c, b});
+            set({points[0], points[2], points[1]});
             dir = -abc;
         }
 
@@ -96,15 +116,15 @@ struct Simplex {
         Terathon::Vector3D adb = Terathon::Cross(ad, ab);
 
         if (isSameDirection(abc, ao)) {
-            set({a, b, c});
+            set({points[0], points[1], points[2]});
             return triangleCase(dir);
         }
         if (isSameDirection(acd, ao)) {
-            set({a, c, d});
+            set({points[0], points[2], points[3]});
             return triangleCase(dir);
         }
         if (isSameDirection(adb, ao)) {
-            set({a, d, b});
+            set({points[0], points[3], points[1]});
             return triangleCase(dir);
         }
 
@@ -127,24 +147,27 @@ struct Simplex {
 
 template <typename ShapeA, typename ShapeB>
 bool gjk(const ShapeA& shapeA, const ShapeB& shapeB, Simplex& simplex) {
-    auto minkowskiSupport = [&](Terathon::Vector3D dir) { return shapeA.support(dir) - shapeB.support(-dir); };
-
     Terathon::Vector3D dir = shapeB.centroid() - shapeA.centroid();
     if (Terathon::Dot(dir, dir) <= 0.0f) {
         dir = {1.0f, 0.0f, 0.0f};
     }
 
-    simplex.pushFront(minkowskiSupport(dir));
+    auto supportA = shapeA.support(dir);
+    auto supportB = shapeB.support(-dir);
+    Terathon::Vector3D sv = minkowskiSupport(shapeA, shapeB, dir);
+    simplex.pushFront(sv, supportA, supportB);
     dir = -simplex.points[0];
 
     for (int i = 0; i < maxGjkIterations; ++i) {
-        Terathon::Vector3D supportPoint = minkowskiSupport(dir);
+        supportA = shapeA.support(dir);
+        supportB = shapeB.support(-dir);
+        Terathon::Vector3D supportPoint = minkowskiSupport(shapeA, shapeB, dir);
 
         if (Terathon::Dot(supportPoint, dir) <= 0.0f) {
             return false;
         }
 
-        simplex.pushFront(supportPoint);
+        simplex.pushFront(supportPoint, supportA, supportB);
         if (simplex.nextSimplex(dir)) {
             return true;
         }

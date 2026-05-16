@@ -2,6 +2,7 @@
 
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/Handle.hpp"
+#include "vgeo/internal/cpu/narrowphase/Epa.hpp"
 #include "vgeo/internal/cpu/narrowphase/Gjk.hpp"
 
 #include <optional>
@@ -14,14 +15,15 @@ std::optional<CollisionPair> collide(Handle a, const ShapeA& shapeA, Handle b, c
     Simplex simplex;
 
     if (!gjk(shapeA, shapeB, simplex)) {
-        return {};
+        return std::nullopt;
     }
 
-    // TODO: EPA
-    CollisionPair pair{a, b, {}};
-    pair.contacts.emplace_back();
+    std::expected<Contact, EpaFailure> contact = epa(shapeA, shapeB, simplex);
+    if (!contact) {
+        return std::nullopt;
+    }
 
-    return pair;
+    return CollisionPair{a, b, {*contact}};
 }
 
 } // namespace vgeo::internal::cpu

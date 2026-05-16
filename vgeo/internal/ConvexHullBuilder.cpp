@@ -2,6 +2,7 @@
 
 #include "vgeo/Point3D.hpp"
 #include "vgeo/internal/ConvexHullData.hpp"
+#include "vgeo/internal/PolytopeUtils.hpp"
 
 #include <TSRigid3D.h>
 #include <TSVector3D.h>
@@ -9,7 +10,6 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
-#include <limits>
 #include <span>
 #include <unordered_map>
 #include <utility>
@@ -17,14 +17,8 @@
 
 namespace {
 
-constexpr uint32_t invalid = std::numeric_limits<uint32_t>::max();
-
-struct HalfEdge {
-    uint32_t origin;
-    uint32_t next;
-    uint32_t twin;
-    uint32_t face;
-};
+using vgeo::internal::HalfEdge;
+using vgeo::internal::invalidIndex;
 
 struct Face {
     uint32_t halfEdge;
@@ -46,17 +40,6 @@ std::vector<Terathon::Point3D> convertPoints(std::span<const vgeo::Point3D> inpu
         points.emplace_back(p.x, p.y, p.z);
     }
     return points;
-}
-
-// epsilon = 3 * (max|x| + max|y| + max|z|) * FLT_EPSILON  (Dirk Gregorius, Implementing QuickHull, GDC 2014)
-float computeEpsilon(std::span<const Terathon::Point3D> points) {
-    float maxX = 0.0f, maxY = 0.0f, maxZ = 0.0f;
-    for (const auto& p : points) {
-        maxX = std::max(maxX, std::abs(p.x));
-        maxY = std::max(maxY, std::abs(p.y));
-        maxZ = std::max(maxZ, std::abs(p.z));
-    }
-    return 3.0f * (maxX + maxY + maxZ) * std::numeric_limits<float>::epsilon();
 }
 
 std::array<uint32_t, 6> findExtremePoints(std::span<const Terathon::Point3D> points) {
@@ -87,7 +70,7 @@ std::array<uint32_t, 6> findExtremePoints(std::span<const Terathon::Point3D> poi
 
 std::pair<uint32_t, uint32_t> findMostDistantPair(std::span<const Terathon::Point3D> points) {
     const std::array<uint32_t, 6> extremePoints = findExtremePoints(points);
-    uint32_t a = invalid, b = invalid;
+    uint32_t a = invalidIndex, b = invalidIndex;
     float maxDistSq = 0.0f;
     for (uint32_t i = 0; i < 6; ++i) {
         for (uint32_t j = i + 1; j < 6; ++j) {
@@ -107,7 +90,7 @@ uint32_t findFurthestFromLine(std::span<const Terathon::Point3D> points, uint32_
     Terathon::Line3D line =
         Terathon::Unitize(Terathon::Wedge(Terathon::Point3D{points[a].x, points[a].y, points[a].z},
                                           Terathon::Point3D{points[b].x, points[b].y, points[b].z}));
-    uint32_t c = invalid;
+    uint32_t c = invalidIndex;
     float maxDistSq = 0.0f;
     for (uint32_t i = 0; i < points.size(); ++i) {
         if (i == a || i == b) {
@@ -126,7 +109,7 @@ uint32_t findFurthestFromLine(std::span<const Terathon::Point3D> points, uint32_
 
 uint32_t findFurthestFromPlane(std::span<const Terathon::Point3D> points, uint32_t a, uint32_t b, uint32_t c) {
     Terathon::Plane3D plane = Terathon::Unitize(Terathon::Plane3D{points[a], points[b], points[c]});
-    uint32_t d = invalid;
+    uint32_t d = invalidIndex;
     float maxDistSq = 0.0f;
     for (uint32_t i = 0; i < points.size(); ++i) {
         if (i == a || i == b || i == c) {
@@ -184,7 +167,7 @@ HullMesh buildInitialTetrahedron(std::span<const Terathon::Point3D> points) {
 void assignOutsideSets(HullMesh& mesh, std::span<const Terathon::Point3D> points, float epsilon) {
     for (uint32_t i = 0; i < points.size(); ++i) {
         float maxDist = epsilon;
-        uint32_t bestFace = invalid;
+        uint32_t bestFace = invalidIndex;
 
         for (uint32_t f = 0; f < mesh.faces.size(); ++f) {
             float dist = Terathon::Antiwedge(points[i], mesh.faces[f].plane);
@@ -194,7 +177,7 @@ void assignOutsideSets(HullMesh& mesh, std::span<const Terathon::Point3D> points
             }
         }
 
-        if (bestFace != invalid) {
+        if (bestFace != invalidIndex) {
             mesh.faces[bestFace].outsideSet.emplace_back(i);
         }
     }
@@ -206,11 +189,11 @@ uint32_t findActiveFace(const HullMesh& mesh) {
             return f;
         }
     }
-    return invalid;
+    return invalidIndex;
 }
 
 uint32_t findFurthestInSet(const Face& face, std::span<const Terathon::Point3D> points) {
-    uint32_t eyeIndex = invalid;
+    uint32_t eyeIndex = invalidIndex;
     float maxDist = 0.0f;
     for (uint32_t index : face.outsideSet) {
         float dist = Terathon::Antiwedge(points[index], face.plane);
@@ -265,9 +248,9 @@ uint32_t addFace(HullMesh& mesh, uint32_t v0, uint32_t v1, uint32_t v2) {
     uint32_t faceIndex = static_cast<uint32_t>(mesh.faces.size());
     uint32_t heBase = static_cast<uint32_t>(mesh.halfEdges.size());
 
-    mesh.halfEdges.emplace_back(v0, heBase + 1, invalid, faceIndex);
-    mesh.halfEdges.emplace_back(v1, heBase + 2, invalid, faceIndex);
-    mesh.halfEdges.emplace_back(v2, heBase + 0, invalid, faceIndex);
+    mesh.halfEdges.emplace_back(v0, heBase + 1, invalidIndex, faceIndex);
+    mesh.halfEdges.emplace_back(v1, heBase + 2, invalidIndex, faceIndex);
+    mesh.halfEdges.emplace_back(v2, heBase + 0, invalidIndex, faceIndex);
 
     Terathon::Plane3D plane =
         Terathon::Unitize(Terathon::Plane3D{mesh.vertices[v0], mesh.vertices[v1], mesh.vertices[v2]});
@@ -302,21 +285,21 @@ expandHull(HullMesh& mesh, const std::vector<uint32_t>& horizon, const Terathon:
     edgeMap.reserve(lastNewHe - firstNewHe);
 
     for (uint32_t he = firstNewHe; he < lastNewHe; ++he) {
-        if (mesh.halfEdges[he].twin != invalid) {
+        if (mesh.halfEdges[he].twin != invalidIndex) {
             continue;
         }
         uint32_t u = mesh.halfEdges[he].origin;
         uint32_t v = mesh.halfEdges[mesh.halfEdges[he].next].origin;
-        edgeMap[static_cast<uint64_t>(u) << 32 | v] = he; // pack two uint32s into one uint64 key
+        edgeMap[vgeo::internal::edgeKey(u, v)] = he;
     }
 
     for (uint32_t he = firstNewHe; he < lastNewHe; ++he) {
-        if (mesh.halfEdges[he].twin != invalid) {
+        if (mesh.halfEdges[he].twin != invalidIndex) {
             continue;
         }
         uint32_t u = mesh.halfEdges[he].origin;
         uint32_t v = mesh.halfEdges[mesh.halfEdges[he].next].origin;
-        mesh.halfEdges[he].twin = edgeMap[static_cast<uint64_t>(v) << 32 | u];
+        mesh.halfEdges[he].twin = edgeMap[vgeo::internal::edgeKey(v, u)];
     }
 
     return newFaces;
@@ -336,7 +319,7 @@ void redistributePoints(HullMesh& mesh,
 
     for (uint32_t index : orphaned) {
         float maxDist = epsilon;
-        uint32_t bestFace = invalid;
+        uint32_t bestFace = invalidIndex;
         for (uint32_t f : newFaces) {
             float dist = Terathon::Antiwedge(points[index], mesh.faces[f].plane);
             if (dist > maxDist) {
@@ -344,7 +327,7 @@ void redistributePoints(HullMesh& mesh,
                 bestFace = f;
             }
         }
-        if (bestFace != invalid) {
+        if (bestFace != invalidIndex) {
             mesh.faces[bestFace].outsideSet.emplace_back(index);
         }
     }
@@ -352,11 +335,11 @@ void redistributePoints(HullMesh& mesh,
 
 HullMesh computeHull(std::span<const vgeo::Point3D> inputPoints) {
     std::vector<Terathon::Point3D> points = convertPoints(inputPoints);
-    float epsilon = computeEpsilon(points);
+    float epsilon = vgeo::internal::calculateRelativeEpsilon(points);
     HullMesh mesh = buildInitialTetrahedron(points);
     assignOutsideSets(mesh, points, epsilon);
 
-    for (uint32_t face = findActiveFace(mesh); face != invalid; face = findActiveFace(mesh)) {
+    for (uint32_t face = findActiveFace(mesh); face != invalidIndex; face = findActiveFace(mesh)) {
         uint32_t eye = findFurthestInSet(mesh.faces[face], points);
         auto [visibleFaces, horizon] = findHorizon(mesh, face, points[eye], epsilon);
         std::vector<uint32_t> newFaces = expandHull(mesh, horizon, points[eye]);
@@ -376,14 +359,14 @@ ConvexHullData ConvexHullBuilder::build(std::span<const vgeo::Point3D> inputPoin
     HullMesh mesh = computeHull(inputPoints);
 
     ConvexHullData hull;
-    std::vector<uint32_t> vertexRemap(mesh.vertices.size(), invalid);
+    std::vector<uint32_t> vertexRemap(mesh.vertices.size(), invalidIndex);
     for (const Face& f : mesh.faces) {
         if (!f.onHull) {
             continue;
         }
         uint32_t he = f.halfEdge;
         uint32_t v0 = mesh.halfEdges[he].origin;
-        if (vertexRemap[v0] == invalid) {
+        if (vertexRemap[v0] == invalidIndex) {
             vertexRemap[v0] = static_cast<uint32_t>(hull.vertices.size());
             const Terathon::Point3D& vertex = mesh.vertices[v0];
             hull.vertices.emplace_back(vertex.x, vertex.y, vertex.z);
@@ -391,7 +374,7 @@ ConvexHullData ConvexHullBuilder::build(std::span<const vgeo::Point3D> inputPoin
         hull.indices.emplace_back(vertexRemap[v0]);
         he = mesh.halfEdges[he].next;
         uint32_t v1 = mesh.halfEdges[he].origin;
-        if (vertexRemap[v1] == invalid) {
+        if (vertexRemap[v1] == invalidIndex) {
             vertexRemap[v1] = static_cast<uint32_t>(hull.vertices.size());
             const Terathon::Point3D& vertex = mesh.vertices[v1];
             hull.vertices.emplace_back(vertex.x, vertex.y, vertex.z);
@@ -399,7 +382,7 @@ ConvexHullData ConvexHullBuilder::build(std::span<const vgeo::Point3D> inputPoin
         hull.indices.emplace_back(vertexRemap[v1]);
         he = mesh.halfEdges[he].next;
         uint32_t v2 = mesh.halfEdges[he].origin;
-        if (vertexRemap[v2] == invalid) {
+        if (vertexRemap[v2] == invalidIndex) {
             vertexRemap[v2] = static_cast<uint32_t>(hull.vertices.size());
             const Terathon::Point3D& vertex = mesh.vertices[v2];
             hull.vertices.emplace_back(vertex.x, vertex.y, vertex.z);

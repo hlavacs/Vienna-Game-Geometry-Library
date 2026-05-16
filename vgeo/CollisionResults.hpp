@@ -9,15 +9,16 @@
 namespace vgeo {
 
 struct Contact {
-    Point3D position;
-    Vector3D normal;
+    Vector3D normal; // pointing from B to A
     float depth;
+    Point3D witnessA;
+    Point3D witnessB;
 };
 
 struct CollisionPair {
     Handle shapeA;
     Handle shapeB;
-    std::vector<Contact> contacts;
+    Contact contact;
 };
 
 struct CollisionResults {
