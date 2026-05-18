@@ -245,7 +245,7 @@ inline Contact buildCollisionContactFromFace(const EpaPolytope& polytope, const 
         u * b0.x + v * b1.x + w * b2.x, u * b0.y + v * b1.y + w * b2.y, u * b0.z + v * b1.z + w * b2.z};
 
     Contact contact{};
-    contact.normal = {face.normal.x, face.normal.y, face.normal.z};
+    contact.normal = {-face.normal.x, -face.normal.y, -face.normal.z};
     contact.depth = depth;
     contact.witnessA = {wA.x, wA.y, wA.z};
     contact.witnessB = {wB.x, wB.y, wB.z};
