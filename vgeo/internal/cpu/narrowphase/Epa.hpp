@@ -20,8 +20,8 @@
 
 namespace vgeo::internal::cpu {
 
-inline constexpr int maxEpaIterations = 64;
-inline constexpr float epaTolerance = 1e-6f;
+inline constexpr int   maxEpaIterations = 64;
+inline constexpr float epaTolerance     = 1e-6f;
 
 enum class EpaFailure {
     Degenerate,
@@ -29,29 +29,29 @@ enum class EpaFailure {
 };
 
 struct EpaFace {
-    uint32_t a;
-    uint32_t b;
-    uint32_t c;
+    uint32_t           a;
+    uint32_t           b;
+    uint32_t           c;
     Terathon::Vector3D normal;
-    float distanceToOrigin;
+    float              distanceToOrigin;
 };
 
 inline std::optional<EpaFace>
 makeFace(std::span<const Terathon::Point3D> vertices, uint32_t a, uint32_t b, uint32_t c) {
-    Terathon::Vector3D ab = vertices[b] - vertices[a];
-    Terathon::Vector3D ac = vertices[c] - vertices[a];
+    Terathon::Vector3D ab     = vertices[b] - vertices[a];
+    Terathon::Vector3D ac     = vertices[c] - vertices[a];
     Terathon::Vector3D normal = Terathon::Cross(ab, ac);
 
     if (Terathon::SquaredMag(normal) <= 0.0f) {
         return std::nullopt;
     }
 
-    normal = Terathon::Normalize(normal);
+    normal         = Terathon::Normalize(normal);
     float distance = Terathon::Dot(normal, vertices[a]);
 
     if (distance < 0.0f) {
         std::swap(b, c);
-        normal = -normal;
+        normal   = -normal;
         distance = -distance;
     }
 
@@ -75,8 +75,8 @@ struct EpaPolytope {
     std::vector<Terathon::Point3D> vertices;
     std::vector<Terathon::Point3D> supportA;
     std::vector<Terathon::Point3D> supportB;
-    std::vector<EpaFace> faces;
-    float tolerance;
+    std::vector<EpaFace>           faces;
+    float                          tolerance;
 
     static std::optional<EpaPolytope> create(const Simplex& simplex) {
         EpaPolytope p;
@@ -121,7 +121,7 @@ struct EpaPolytope {
 
     bool
     expand(const Terathon::Vector3D& supportPoint, const Terathon::Point3D& pointA, const Terathon::Point3D& pointB) {
-        std::vector<EpaFace> visibleFaces;
+        std::vector<EpaFace>                       visibleFaces;
         std::vector<std::pair<uint32_t, uint32_t>> boundary;
 
         for (const EpaFace& face : faces) {
@@ -245,8 +245,8 @@ inline Contact buildCollisionContactFromFace(const EpaPolytope& polytope, const 
         u * b0.x + v * b1.x + w * b2.x, u * b0.y + v * b1.y + w * b2.y, u * b0.z + v * b1.z + w * b2.z};
 
     Contact contact{};
-    contact.normal = {-face.normal.x, -face.normal.y, -face.normal.z};
-    contact.depth = depth;
+    contact.normal   = {-face.normal.x, -face.normal.y, -face.normal.z};
+    contact.depth    = depth;
     contact.witnessA = {wA.x, wA.y, wA.z};
     contact.witnessB = {wB.x, wB.y, wB.z};
     return contact;
@@ -265,14 +265,14 @@ std::expected<Contact, EpaFailure> epa(const ShapeA& shapeA, const ShapeB& shape
             return std::unexpected(EpaFailure::Degenerate);
         }
 
-        const EpaFace& closest = polytope->faces[*faceIdx];
-        Terathon::Vector3D normal = closest.normal;
-        float faceDist = closest.distanceToOrigin;
+        const EpaFace&     closest  = polytope->faces[*faceIdx];
+        Terathon::Vector3D normal   = closest.normal;
+        float              faceDist = closest.distanceToOrigin;
 
-        auto supportA = shapeA.support(normal);
-        auto supportB = shapeB.support(-normal);
+        auto               supportA      = shapeA.support(normal);
+        auto               supportB      = shapeB.support(-normal);
         Terathon::Vector3D minkowskiDiff = {supportA.x - supportB.x, supportA.y - supportB.y, supportA.z - supportB.z};
-        float supportDist = Terathon::Dot(normal, minkowskiDiff);
+        float              supportDist   = Terathon::Dot(normal, minkowskiDiff);
 
         if (std::abs(supportDist - faceDist) <= polytope->tolerance) {
             Contact contact = buildCollisionContactFromFace(*polytope, closest, faceDist);

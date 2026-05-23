@@ -9,10 +9,10 @@
 namespace vgeo {
 
 struct RayHit {
-    Handle shape;
-    Point3D position;
+    Handle   shape;
+    Point3D  position;
     Vector3D normal;
-    float distance;
+    float    distance;
 };
 
 struct RayResult {

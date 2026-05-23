@@ -10,14 +10,14 @@ namespace vgeo {
 
 struct Contact {
     Vector3D normal; // pointing from B to A
-    float depth;
-    Point3D witnessA;
-    Point3D witnessB;
+    float    depth;
+    Point3D  witnessA;
+    Point3D  witnessB;
 };
 
 struct CollisionPair {
-    Handle shapeA;
-    Handle shapeB;
+    Handle  shapeA;
+    Handle  shapeB;
     Contact contact;
 };
 

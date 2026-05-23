@@ -26,9 +26,9 @@ inline Terathon::Vector3D minkowskiSupport(const ShapeA& shapeA, const ShapeB& s
 
 struct Simplex {
     std::array<Terathon::Vector3D, 4> points;
-    std::array<Terathon::Point3D, 4> supportPointsA; // Support points on shape A
-    std::array<Terathon::Point3D, 4> supportPointsB; // Support points on shape B
-    int size = 0;
+    std::array<Terathon::Point3D, 4>  supportPointsA; // Support points on shape A
+    std::array<Terathon::Point3D, 4>  supportPointsB; // Support points on shape B
+    int                               size = 0;
 
     void pushFront(Terathon::Vector3D p, Terathon::Point3D pA, Terathon::Point3D pB) {
         points[3] = points[2];
@@ -57,8 +57,8 @@ struct Simplex {
     }
 
     bool lineCase(Terathon::Vector3D& dir) {
-        Terathon::Vector3D a = points[0];
-        Terathon::Vector3D b = points[1];
+        Terathon::Vector3D a  = points[0];
+        Terathon::Vector3D b  = points[1];
         Terathon::Vector3D ab = b - a;
         Terathon::Vector3D ao = -a;
 
@@ -72,12 +72,12 @@ struct Simplex {
     }
 
     bool triangleCase(Terathon::Vector3D& dir) {
-        Terathon::Vector3D a = points[0];
-        Terathon::Vector3D b = points[1];
-        Terathon::Vector3D c = points[2];
-        Terathon::Vector3D ab = b - a;
-        Terathon::Vector3D ac = c - a;
-        Terathon::Vector3D ao = -a;
+        Terathon::Vector3D a   = points[0];
+        Terathon::Vector3D b   = points[1];
+        Terathon::Vector3D c   = points[2];
+        Terathon::Vector3D ab  = b - a;
+        Terathon::Vector3D ac  = c - a;
+        Terathon::Vector3D ao  = -a;
         Terathon::Vector3D abc = Terathon::Cross(ab, ac);
 
         if (isSameDirection(Terathon::Cross(abc, ac), ao)) {
@@ -103,14 +103,14 @@ struct Simplex {
     }
 
     bool tetrahedronCase(Terathon::Vector3D& dir) {
-        Terathon::Vector3D a = points[0];
-        Terathon::Vector3D b = points[1];
-        Terathon::Vector3D c = points[2];
-        Terathon::Vector3D d = points[3];
-        Terathon::Vector3D ab = b - a;
-        Terathon::Vector3D ac = c - a;
-        Terathon::Vector3D ad = d - a;
-        Terathon::Vector3D ao = -a;
+        Terathon::Vector3D a   = points[0];
+        Terathon::Vector3D b   = points[1];
+        Terathon::Vector3D c   = points[2];
+        Terathon::Vector3D d   = points[3];
+        Terathon::Vector3D ab  = b - a;
+        Terathon::Vector3D ac  = c - a;
+        Terathon::Vector3D ad  = d - a;
+        Terathon::Vector3D ao  = -a;
         Terathon::Vector3D abc = Terathon::Cross(ab, ac);
         Terathon::Vector3D acd = Terathon::Cross(ac, ad);
         Terathon::Vector3D adb = Terathon::Cross(ad, ab);
@@ -152,15 +152,15 @@ bool gjk(const ShapeA& shapeA, const ShapeB& shapeB, Simplex& simplex) {
         dir = {1.0f, 0.0f, 0.0f};
     }
 
-    auto supportA = shapeA.support(dir);
-    auto supportB = shapeB.support(-dir);
-    Terathon::Vector3D sv = minkowskiSupport(shapeA, shapeB, dir);
+    auto               supportA = shapeA.support(dir);
+    auto               supportB = shapeB.support(-dir);
+    Terathon::Vector3D sv       = minkowskiSupport(shapeA, shapeB, dir);
     simplex.pushFront(sv, supportA, supportB);
     dir = -simplex.points[0];
 
     for (int i = 0; i < maxGjkIterations; ++i) {
-        supportA = shapeA.support(dir);
-        supportB = shapeB.support(-dir);
+        supportA                        = shapeA.support(dir);
+        supportB                        = shapeB.support(-dir);
         Terathon::Vector3D supportPoint = minkowskiSupport(shapeA, shapeB, dir);
 
         if (Terathon::Dot(supportPoint, dir) <= 0.0f) {

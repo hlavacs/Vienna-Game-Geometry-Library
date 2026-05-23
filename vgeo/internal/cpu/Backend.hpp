@@ -104,7 +104,7 @@ public:
     }
 
     CollisionResults queryAll() const {
-        CollisionResults results;
+        CollisionResults           results;
         std::vector<CandidatePair> candidates = m_broadphase.findCandidates();
 
         for (auto [handleA, handleB] : candidates) {
@@ -159,7 +159,7 @@ private:
 
     template <typename Shape, ShapeType Type>
     Handle addShape(HandleRegistry<Type>& registry, std::vector<Shape>& storage, Shape shape) {
-        Handle h = registry.allocate();
+        Handle   h     = registry.allocate();
         uint32_t index = h.getIndex();
         if (index >= storage.size()) {
             storage.resize(index + 1);
@@ -168,18 +168,18 @@ private:
         return h;
     }
 
-    HandleRegistry<ShapeType::AaBox> m_aaBoxRegistry;
-    HandleRegistry<ShapeType::Capsule> m_capsuleRegistry;
+    HandleRegistry<ShapeType::AaBox>      m_aaBoxRegistry;
+    HandleRegistry<ShapeType::Capsule>    m_capsuleRegistry;
     HandleRegistry<ShapeType::ConvexHull> m_convexHullRegistry;
-    HandleRegistry<ShapeType::Sphere> m_sphereRegistry;
+    HandleRegistry<ShapeType::Sphere>     m_sphereRegistry;
 
-    std::vector<AaBox> m_aaBoxes;
-    std::vector<Capsule> m_capsules;
+    std::vector<AaBox>      m_aaBoxes;
+    std::vector<Capsule>    m_capsules;
     std::vector<ConvexHull> m_convexHulls;
-    std::vector<Sphere> m_spheres;
+    std::vector<Sphere>     m_spheres;
 
     std::optional<vgeo::internal::gpu::VulkanHandler> m_vulkanHandler;
-    Bp m_broadphase;
+    Bp                                                m_broadphase;
 };
 
 } // namespace vgeo::internal::cpu

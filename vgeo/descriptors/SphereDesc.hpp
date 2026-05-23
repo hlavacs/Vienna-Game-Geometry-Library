@@ -6,7 +6,7 @@ namespace vgeo {
 
 struct SphereDesc {
     Point3D center;
-    float radius;
+    float   radius;
 };
 
 } // namespace vgeo

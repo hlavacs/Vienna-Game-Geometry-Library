@@ -1,4 +1,5 @@
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
+
 #include "catch2/catch_approx.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -8,7 +9,7 @@ using Catch::Approx;
 
 TEST_CASE("Sphere centroid", "[Sphere]") {
     Sphere sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
-    auto c = sphere.centroid();
+    auto   c = sphere.centroid();
 
     CHECK(c.x == 2.0f);
     CHECK(c.y == 3.0f);
@@ -17,7 +18,7 @@ TEST_CASE("Sphere centroid", "[Sphere]") {
 
 TEST_CASE("Sphere computeBv (Aabb)", "[Sphere]") {
     Sphere sphere{{2.0f, 3.0f, 4.0f}, 1.0f};
-    auto bv = sphere.computeBv<Aabb>();
+    auto   bv = sphere.computeBv<Aabb>();
 
     CHECK(bv.getMin().x == 1.0f);
     CHECK(bv.getMin().y == 2.0f);

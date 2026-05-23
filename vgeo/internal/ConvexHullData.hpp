@@ -8,7 +8,7 @@
 namespace vgeo::internal {
 
 struct ConvexHullData {
-    std::vector<Point3D> vertices;
+    std::vector<Point3D>  vertices;
     std::vector<uint32_t> indices;
 };
 

@@ -7,7 +7,7 @@ namespace vgeo {
 struct CapsuleDesc {
     Point3D a;
     Point3D b;
-    float radius;
+    float   radius;
 };
 
 } // namespace vgeo

@@ -8,7 +8,7 @@ using Catch::Approx;
 
 TEST_CASE("Capsule centroid", "[Capsule]") {
     Capsule capsule{{0.0f, 0.0f, 0.0f}, {2.0f, 4.0f, 6.0f}, 0.5f};
-    auto c = capsule.centroid();
+    auto    c = capsule.centroid();
 
     CHECK(c.x == 1.0f);
     CHECK(c.y == 2.0f);
@@ -17,7 +17,7 @@ TEST_CASE("Capsule centroid", "[Capsule]") {
 
 TEST_CASE("Capsule computeBv (Aabb)", "[Capsule]") {
     Capsule capsule{{-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, 1.0f};
-    auto bv = capsule.computeBv<Aabb>();
+    auto    bv = capsule.computeBv<Aabb>();
 
     CHECK(bv.getMin().x == -2.0f);
     CHECK(bv.getMin().y == -1.0f);
