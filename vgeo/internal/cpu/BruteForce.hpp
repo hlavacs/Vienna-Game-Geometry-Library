@@ -1,5 +1,5 @@
-// vgeo/internal/cpu/broadphase/BruteForce.hpp
 #pragma once
+
 #include "vgeo/Handle.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
@@ -12,10 +12,13 @@
 
 namespace vgeo::internal::cpu {
 
-template <BoundingVolume Bv>
+template <BoundingVolume Bv = Aabb>
 class BruteForce {
 public:
-    void add(Handle handle, Bv bv) {
+    using BoundingVolumeType = Bv;
+
+    void add(Handle handle, ShapeVariant shape) {
+        Bv bv = std::visit([](const auto& shape) { return shape.template computeBv<Bv>(); }, shape);
         m_shapeBvs.push_back({handle, bv});
     }
 
@@ -27,7 +30,7 @@ public:
         std::vector<CandidatePair> candidates;
         for (size_t i = 0; i < m_shapeBvs.size(); ++i) {
             for (size_t j = i + 1; j < m_shapeBvs.size(); ++j) {
-                if (m_shapeBvs[i].second.intersects(m_shapeBvs[j].second)) {
+                if (m_shapeBvs[i].second.overlaps(m_shapeBvs[j].second)) {
                     candidates.push_back({m_shapeBvs[i].first, m_shapeBvs[j].first});
                 }
             }
@@ -36,13 +39,19 @@ public:
     }
 
     std::vector<Handle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        return {}; // TODO: implement ray casting
+        std::vector<Handle> hits;
+        for (const auto& [handle, bv] : m_shapeBvs) {
+            if (bv.intersectsRay(origin, dir)) {
+                hits.push_back(handle);
+            }
+        }
+        return hits;
     }
 
 private:
     std::vector<std::pair<Handle, Bv>> m_shapeBvs;
 };
 
-static_assert(BroadPhase<BruteForce<Aabb>, Aabb>);
+static_assert(BvBroadPhase<BruteForce<Aabb>>);
 
 } // namespace vgeo::internal::cpu

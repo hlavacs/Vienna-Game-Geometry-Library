@@ -12,43 +12,52 @@
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 #include "vgeo/internal/HandleRegistry.hpp"
-#include "vgeo/internal/cpu/BruteForce.hpp"
+#include "vgeo/internal/cpu/BroadPhase.hpp"
+#include "vgeo/internal/cpu/ShapeVariant.hpp"
 #include "vgeo/internal/cpu/narrowphase/NarrowPhase.hpp"
 #include "vgeo/internal/cpu/shapes/AaBox.hpp"
 #include "vgeo/internal/cpu/shapes/Capsule.hpp"
 #include "vgeo/internal/cpu/shapes/ConvexHull.hpp"
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
+#include "vgeo/internal/gpu/VulkanHandler.hpp"
 
+#include <cassert>
 #include <optional>
 #include <variant>
 #include <vector>
 
+struct VkPhysicalDevice_T;
+
 namespace vgeo::internal::cpu {
 
-template <typename Bv>
+template <BroadPhase Bp>
 class Backend {
 public:
+    Backend() = default;
+
+    explicit Backend(VkPhysicalDevice_T* physicalDevice) : m_vulkanHandler(std::in_place, physicalDevice) {}
+
     Handle add(const AaBoxDesc& desc) {
         Handle h = addShape(m_aaBoxRegistry, m_aaBoxes, AaBox{desc.min, desc.max});
-        m_broadphase.add(h, m_aaBoxes[h.getIndex()].template computeBv<Bv>());
+        m_broadphase.add(h, ShapeVariant{m_aaBoxes[h.getIndex()]});
         return h;
     }
 
     Handle add(const CapsuleDesc& desc) {
         Handle h = addShape(m_capsuleRegistry, m_capsules, Capsule{desc.a, desc.b, desc.radius});
-        m_broadphase.add(h, m_capsules[h.getIndex()].template computeBv<Bv>());
+        m_broadphase.add(h, ShapeVariant{m_capsules[h.getIndex()]});
         return h;
     }
 
     Handle add(const ConvexHullDesc& desc) {
         Handle h = addShape(m_convexHullRegistry, m_convexHulls, ConvexHull{ConvexHullBuilder::build(desc.points)});
-        m_broadphase.add(h, m_convexHulls[h.getIndex()].template computeBv<Bv>());
+        m_broadphase.add(h, ShapeVariant{m_convexHulls[h.getIndex()]});
         return h;
     }
 
     Handle add(const SphereDesc& desc) {
         Handle h = addShape(m_sphereRegistry, m_spheres, Sphere{desc.center, desc.radius});
-        m_broadphase.add(h, m_spheres[h.getIndex()].template computeBv<Bv>());
+        m_broadphase.add(h, ShapeVariant{m_spheres[h.getIndex()]});
         return h;
     }
 
@@ -103,8 +112,8 @@ public:
                 std::swap(handleA, handleB);
             }
 
-            Shape shapeA = getShape(handleA);
-            Shape shapeB = getShape(handleB);
+            ShapeVariant shapeA = getShape(handleA);
+            ShapeVariant shapeB = getShape(handleB);
 
             std::optional<CollisionPair> result = std::visit(
                 [&](const auto& shapeA, const auto& shapeB) { return collide(handleA, shapeA, handleB, shapeB); },
@@ -132,9 +141,7 @@ public:
     }
 
 private:
-    using Shape = std::variant<AaBox, Capsule, Sphere, ConvexHull>;
-
-    Shape getShape(Handle h) const {
+    ShapeVariant getShape(Handle h) const {
         switch (h.getType()) {
             case ShapeType::AaBox:
                 return m_aaBoxes[h.getIndex()];
@@ -171,7 +178,8 @@ private:
     std::vector<ConvexHull> m_convexHulls;
     std::vector<Sphere> m_spheres;
 
-    BruteForce<Bv> m_broadphase;
+    std::optional<vgeo::internal::gpu::VulkanHandler> m_vulkanHandler;
+    Bp m_broadphase;
 };
 
 } // namespace vgeo::internal::cpu

@@ -4,28 +4,26 @@
 #include "vgeo/Handle.hpp"
 #include "vgeo/Point3D.hpp"
 #include "vgeo/RayResult.hpp"
-#include "vgeo/UserPolicy.hpp"
 #include "vgeo/Vector3D.hpp"
 #include "vgeo/descriptors/AaBoxDesc.hpp"
 #include "vgeo/descriptors/CapsuleDesc.hpp"
 #include "vgeo/descriptors/ConvexHullDesc.hpp"
 #include "vgeo/descriptors/SphereDesc.hpp"
-#include "vgeo/internal/CollisionBackend.hpp"
 #include "vgeo/internal/cpu/Backend.hpp"
+#include "vgeo/internal/cpu/Bvh.hpp"
 
 #include <optional>
 
+struct VkPhysicalDevice_T;
+
 namespace vgeo {
 
-template <typename Bv = Aabb>
+template <internal::cpu::BroadPhase Bp = internal::cpu::Bvh<>>
 class CollisionSystem {
 public:
-    static CollisionSystem cpu() {
-        return CollisionSystem(internal::cpu::Backend<Bv>{});
-    }
+    CollisionSystem() = default;
 
-    // TODO: make gpu backend
-    static CollisionSystem gpu() = delete;
+    explicit CollisionSystem(VkPhysicalDevice_T* physicalDevice) : m_backend(physicalDevice) {}
 
     Handle addAaBox(const AaBoxDesc& aaBox) {
         return m_backend.add(aaBox);
@@ -68,13 +66,7 @@ public:
     }
 
 private:
-    explicit CollisionSystem(internal::cpu::Backend<Bv> backend) : m_backend(std::move(backend)) {}
-
-    // use this later, when gpu backend is added:
-    // std::variant<internal::cpu::Backend<Bv>, internal::gpu::Backend>
-    internal::cpu::Backend<Bv> m_backend;
+    internal::cpu::Backend<Bp> m_backend;
 };
-
-static_assert(internal::CollisionBackend<internal::cpu::Backend<Aabb>>);
 
 } // namespace vgeo

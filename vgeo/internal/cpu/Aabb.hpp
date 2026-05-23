@@ -23,9 +23,13 @@ public:
         return m_max;
     }
 
-    [[nodiscard]] bool intersects(const Aabb& other) const {
+    [[nodiscard]] bool overlaps(const Aabb& other) const {
         return m_min.x <= other.m_max.x && m_max.x >= other.m_min.x && m_min.y <= other.m_max.y &&
                m_max.y >= other.m_min.y && m_min.z <= other.m_max.z && m_max.z >= other.m_min.z;
+    }
+
+    [[nodiscard]] bool intersectsRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        return false;
     }
 
     [[nodiscard]] Terathon::Point3D centroid() const {
