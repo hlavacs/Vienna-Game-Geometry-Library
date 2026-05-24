@@ -7,6 +7,8 @@
 
 #include <TSVector3D.h>
 
+#include <optional>
+
 namespace vgeo::internal::cpu {
 
 class AaBox {
@@ -34,6 +36,10 @@ public:
         dir = Terathon::Normalize(dir);
         return {
             dir.x >= 0.0f ? m_max.x : m_min.x, dir.y >= 0.0f ? m_max.y : m_min.y, dir.z >= 0.0f ? m_max.z : m_min.z};
+    }
+
+    std::optional<RayHit> intersectRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        return std::nullopt;
     }
 
 private:

@@ -59,6 +59,10 @@ public:
         return furthest;
     }
 
+    std::optional<RayHit> intersectRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        return std::nullopt;
+    }
+
 private:
     std::vector<Terathon::Point3D> m_vertices;
     std::vector<uint32_t>          m_indices;

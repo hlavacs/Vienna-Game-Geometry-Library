@@ -41,6 +41,10 @@ public:
         return furthestEndpoint + m_radius * dir;
     }
 
+    std::optional<RayHit> intersectRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        return std::nullopt;
+    }
+
 private:
     Terathon::Point3D m_a;
     Terathon::Point3D m_b;
