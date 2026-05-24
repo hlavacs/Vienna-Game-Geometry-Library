@@ -101,11 +101,10 @@ private:
 
     uint32_t buildNode(uint32_t begin, uint32_t end) const {
         uint32_t nodeIndex = static_cast<uint32_t>(m_nodes.size());
-        m_nodes.emplace_back(); // default construct empty node
 
         if (end - begin == 1) {
-            m_nodes[nodeIndex].entryIndex = m_indices[begin];
-            m_nodes[nodeIndex].bv         = m_shapeEntries[m_indices[begin]].bv;
+            Bv leafBv = m_shapeEntries[m_indices[begin]].bv;
+            m_nodes.emplace_back(leafBv, Invalid, Invalid, m_indices[begin]);
             return nodeIndex;
         }
 
@@ -113,7 +112,8 @@ private:
         for (uint32_t i = begin + 1; i < end; ++i) {
             mergedBv = Bv::merge(mergedBv, m_shapeEntries[m_indices[i]].bv);
         }
-        m_nodes[nodeIndex].bv = mergedBv;
+
+        m_nodes.emplace_back(mergedBv, Invalid, Invalid, Invalid);
 
         uint32_t mid             = splitMidpoint(begin, end);
         m_nodes[nodeIndex].left  = buildNode(begin, mid);
@@ -176,7 +176,7 @@ private:
         const Node& nodeA = m_nodes[a];
         const Node& nodeB = m_nodes[b];
 
-        if (!nodeA.bv.intersects(nodeB.bv)) {
+        if (!nodeA.bv.overlaps(nodeB.bv)) {
             return;
         }
 
