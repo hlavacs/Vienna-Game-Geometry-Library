@@ -142,12 +142,18 @@ public:
         return m_cachedResults.value();
     }
 
-    std::optional<CollisionPair> queryPair(Handle, Handle) const {
-        return {};
+    std::optional<CollisionPair> queryPair(Handle handleA, Handle handleB) const {
+        ShapeVariant shapeA = getShape(handleA);
+        ShapeVariant shapeB = getShape(handleB);
+
+        return std::visit(
+            [&](const auto& shapeA, const auto& shapeB) { return collide(handleA, shapeA, handleB, shapeB); },
+            shapeA,
+            shapeB);
     }
 
-    bool overlaps(Handle, Handle) const {
-        return false;
+    bool overlaps(Handle handleA, Handle handleB) const {
+        return queryPair(handleA, handleB).has_value();
     }
 
     RayResult castRay(Point3D, Vector3D) const {

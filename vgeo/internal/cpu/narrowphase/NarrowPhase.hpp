@@ -12,7 +12,8 @@
 
 namespace vgeo::internal::cpu {
 
-inline std::optional<CollisionPair> collide(Handle a, const Sphere& shapeA, Handle b, const Sphere& shapeB) {
+inline std::optional<CollisionPair>
+collide(Handle handleA, const Sphere& shapeA, Handle handleB, const Sphere& shapeB) {
     const Terathon::Sphere3D sphereA              = Terathon::Unitize(shapeA.getSphere());
     const Terathon::Sphere3D sphereB              = Terathon::Unitize(shapeB.getSphere());
     const Terathon::Circle3D intersectionCircle   = Terathon::Antiwedge(sphereA, sphereB);
@@ -46,12 +47,12 @@ inline std::optional<CollisionPair> collide(Handle a, const Sphere& shapeA, Hand
     const float    depth  = (intersectionRadiusSq > 0.0f) ? ((radiusA + radiusB) - dist) : 0.0f;
 
     const Contact contact{normal, depth, {witnessA.x, witnessA.y, witnessA.z}, {witnessB.x, witnessB.y, witnessB.z}};
-    return CollisionPair{a, b, contact};
+    return CollisionPair{handleA, handleB, contact};
 }
 
 // GJK+EPA fallback for any convex pair
 template <typename ShapeA, typename ShapeB>
-std::optional<CollisionPair> collide(Handle a, const ShapeA& shapeA, Handle b, const ShapeB& shapeB) {
+std::optional<CollisionPair> collide(Handle handleA, const ShapeA& shapeA, Handle handleB, const ShapeB& shapeB) {
     Simplex simplex;
 
     if (!gjk(shapeA, shapeB, simplex)) {
@@ -63,7 +64,7 @@ std::optional<CollisionPair> collide(Handle a, const ShapeA& shapeA, Handle b, c
         return std::nullopt;
     }
 
-    return CollisionPair{a, b, {*contact}};
+    return CollisionPair{handleA, handleB, {*contact}};
 }
 
 } // namespace vgeo::internal::cpu
