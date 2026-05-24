@@ -3,6 +3,7 @@
 #include "vgeo/ShapeType.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace vgeo::internal {
 template <ShapeType>
@@ -48,3 +49,14 @@ private:
 };
 
 } // namespace vgeo
+
+namespace std {
+
+template <>
+struct hash<vgeo::Handle> {
+    size_t operator()(const vgeo::Handle& handle) const noexcept {
+        return hash<uint64_t>{}(handle.getId());
+    }
+};
+
+} // namespace std
