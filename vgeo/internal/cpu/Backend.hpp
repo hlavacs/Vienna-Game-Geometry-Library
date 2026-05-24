@@ -38,30 +38,40 @@ public:
     explicit Backend(VkPhysicalDevice_T* physicalDevice) : m_vulkanHandler(std::in_place, physicalDevice) {}
 
     Handle add(const AaBoxDesc& desc) {
+        m_cachedResults.reset();
+
         Handle h = addShape(m_aaBoxRegistry, m_aaBoxes, AaBox{desc.min, desc.max});
         m_broadphase.add(h, ShapeVariant{m_aaBoxes[h.getIndex()]});
         return h;
     }
 
     Handle add(const CapsuleDesc& desc) {
+        m_cachedResults.reset();
+
         Handle h = addShape(m_capsuleRegistry, m_capsules, Capsule{desc.a, desc.b, desc.radius});
         m_broadphase.add(h, ShapeVariant{m_capsules[h.getIndex()]});
         return h;
     }
 
     Handle add(const ConvexHullDesc& desc) {
+        m_cachedResults.reset();
+
         Handle h = addShape(m_convexHullRegistry, m_convexHulls, ConvexHull{ConvexHullBuilder::build(desc.points)});
         m_broadphase.add(h, ShapeVariant{m_convexHulls[h.getIndex()]});
         return h;
     }
 
     Handle add(const SphereDesc& desc) {
+        m_cachedResults.reset();
+
         Handle h = addShape(m_sphereRegistry, m_spheres, Sphere{desc.center, desc.radius});
         m_broadphase.add(h, ShapeVariant{m_spheres[h.getIndex()]});
         return h;
     }
 
     void remove(Handle h) {
+        m_cachedResults.reset();
+
         uint32_t index = h.getIndex();
         switch (h.getType()) {
             case ShapeType::AaBox:
@@ -104,7 +114,11 @@ public:
     }
 
     CollisionResults queryAll() const {
-        CollisionResults           results;
+        if (m_cachedResults.has_value()) {
+            return m_cachedResults.value();
+        }
+
+        m_cachedResults.emplace();
         std::vector<CandidatePair> candidates = m_broadphase.findCandidates();
 
         for (auto [handleA, handleB] : candidates) {
@@ -121,11 +135,11 @@ public:
                 shapeB);
 
             if (result) {
-                results.pairs.push_back(std::move(*result));
+                m_cachedResults->pairs.push_back(std::move(*result));
             }
         }
 
-        return results;
+        return m_cachedResults.value();
     }
 
     std::optional<CollisionPair> queryPair(Handle, Handle) const {
@@ -180,6 +194,7 @@ private:
 
     std::optional<vgeo::internal::gpu::VulkanHandler> m_vulkanHandler;
     Bp                                                m_broadphase;
+    mutable std::optional<CollisionResults>           m_cachedResults;
 };
 
 } // namespace vgeo::internal::cpu
