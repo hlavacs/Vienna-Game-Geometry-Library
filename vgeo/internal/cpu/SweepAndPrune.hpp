@@ -9,8 +9,8 @@
 #include <TSVector3D.h>
 
 #include <algorithm>
-#include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace vgeo::internal::cpu {
@@ -52,18 +52,16 @@ public:
     }
 
     std::vector<CandidatePair> findCandidates() const {
-        std::vector<CandidatePair> candidatesX = collectPairs(m_axisX);
-        std::vector<CandidatePair> candidatesY = collectPairs(m_axisY);
-        std::vector<CandidatePair> candidatesZ = collectPairs(m_axisZ);
+        std::unordered_set<CandidatePair> candidatesX = collectPairs(m_axisX);
+        std::unordered_set<CandidatePair> candidatesY = collectPairs(m_axisY);
+        std::unordered_set<CandidatePair> candidatesZ = collectPairs(m_axisZ);
 
         std::vector<CandidatePair> result;
-
         for (const CandidatePair& pair : candidatesX) {
-            if (containsPair(candidatesY, pair) && containsPair(candidatesZ, pair)) {
+            if (candidatesY.contains(pair) && candidatesZ.contains(pair)) {
                 result.push_back(pair);
             }
         }
-
         return result;
     }
 
@@ -93,28 +91,22 @@ private:
     std::vector<Endpoint>            m_axisZ;
     std::unordered_map<Handle, Aabb> m_aabbs;
 
-    std::vector<CandidatePair> collectPairs(const std::vector<Endpoint>& axis) const {
-        std::vector<Handle>        open;
-        std::vector<CandidatePair> pairs;
+    std::unordered_set<CandidatePair> collectPairs(const std::vector<Endpoint>& axis) const {
+        std::unordered_set<Handle>        open;
+        std::unordered_set<CandidatePair> pairs;
 
         for (const Endpoint& endpoint : axis) {
             if (endpoint.type == EndpointType::Min) {
-                open.emplace_back(endpoint.handle);
-                for (uint32_t i = 0; i + 1 < open.size(); ++i) {
-                    pairs.emplace_back(open.at(i), endpoint.handle);
+                for (const Handle& other : open) {
+                    pairs.emplace(other, endpoint.handle);
                 }
+                open.insert(endpoint.handle);
             } else {
-                std::erase_if(open, [&endpoint](Handle handle) { return endpoint.handle == handle; });
+                open.erase(endpoint.handle);
             }
         }
 
         return pairs;
-    }
-
-    static bool containsPair(const std::vector<CandidatePair>& pairs, const CandidatePair& pair) {
-        return std::find_if(pairs.begin(), pairs.end(), [&pair](const CandidatePair& other) {
-                   return (pair.a == other.a && pair.b == other.b) || (pair.a == other.b && pair.b == other.a);
-               }) != pairs.end();
     }
 };
 
