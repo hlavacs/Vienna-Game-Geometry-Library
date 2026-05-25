@@ -35,6 +35,9 @@ class Backend {
 public:
     Backend() = default;
 
+    template <typename... Args>
+    explicit Backend(Args&&... args) : m_broadphase(std::forward<Args>(args)...) {}
+
     explicit Backend(VkPhysicalDevice_T* physicalDevice) : m_vulkanHandler(std::in_place, physicalDevice) {}
 
     Handle add(const AaBoxDesc& desc) {

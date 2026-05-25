@@ -23,6 +23,9 @@ class CollisionSystem {
 public:
     CollisionSystem() = default;
 
+    template <typename... Args>
+    explicit CollisionSystem(Args&&... args) : m_backend(std::forward<Args>(args)...) {}
+
     explicit CollisionSystem(VkPhysicalDevice_T* physicalDevice) : m_backend(physicalDevice) {}
 
     Handle addAaBox(const AaBoxDesc& aaBox) {
