@@ -5,10 +5,10 @@
 namespace vgeo {
 
 enum class ShapeType : uint32_t {
-    Sphere     = 0,
+    AaBox      = 0,
     Capsule    = 1,
-    AaBox      = 2,
-    ConvexHull = 3,
+    ConvexHull = 2,
+    Sphere     = 3,
 };
 
 } // namespace vgeo
