@@ -9,48 +9,59 @@
 #include "vgeo/internal/cpu/shapes/Capsule.hpp"
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <optional>
 
 namespace vgeo::internal::cpu {
 
+// GJK+EPA fallback for any convex pair
+template <typename ShapeA, typename ShapeB>
+std::optional<CollisionPair> collide(Handle handleA, const ShapeA& shapeA, Handle handleB, const ShapeB& shapeB) {
+    Simplex simplex;
+
+    if (!gjk(shapeA, shapeB, simplex)) {
+        return std::nullopt;
+    }
+
+    std::expected<Contact, EpaFailure> contact = epa(shapeA, shapeB, simplex);
+    if (!contact) {
+        return std::nullopt;
+    }
+
+    return CollisionPair{handleA, handleB, {*contact}};
+}
+
 inline std::optional<CollisionPair>
 collide(Handle handleA, const Capsule& capsuleA, Handle handleB, const Capsule& capsuleB) {
-    const Terathon::Point3D  a1 = capsuleA.getA();
-    const Terathon::Point3D  a2 = capsuleA.getB();
-    const Terathon::Point3D  b1 = capsuleB.getA();
-    const Terathon::Point3D  b2 = capsuleB.getB();
-    const Terathon::Vector3D d1 = a2 - a1;
-    const Terathon::Vector3D d2 = b2 - b1;
+    const Terathon::Point3D  a1     = capsuleA.getA();
+    const Terathon::Point3D  a2     = capsuleA.getB();
+    const Terathon::Point3D  b1     = capsuleB.getA();
+    const Terathon::Point3D  b2     = capsuleB.getB();
+    const Terathon::Vector3D d1     = a2 - a1;
+    const Terathon::Vector3D d2     = b2 - b1;
+    const float              lenASq = Terathon::SquaredMag(d1);
+    const float              lenBSq = Terathon::SquaredMag(d2);
 
-    const float lenASq = Terathon::SquaredMag(d1);
-    const float lenBSq = Terathon::SquaredMag(d2);
-
-    float s;
-    float t;
-
-    Terathon::Point3D closestA;
-    Terathon::Point3D closestB;
+    float             s, t;
+    Terathon::Point3D closestA, closestB;
 
     if (lenASq <= 1e-6f && lenBSq <= 1e-6f) {
-        s = 0.0f;
-        t = 0.0f;
-
+        s        = 0.0f;
+        t        = 0.0f;
         closestA = a1;
         closestB = b1;
     } else if (lenASq <= 1e-6f) {
-        s = 0.0f;
-        t = std::clamp(Terathon::Dot(a1 - b1, d2) / lenBSq, 0.0f, 1.0f);
-
+        s        = 0.0f;
+        t        = std::clamp(Terathon::Dot(a1 - b1, d2) / lenBSq, 0.0f, 1.0f);
         closestA = a1;
         closestB = b1 + t * d2;
     } else if (lenBSq <= 1e-6f) {
         const float c = Terathon::Dot(d1, a1 - b1);
         t             = 0.0f;
         s             = std::clamp(-c / lenASq, 0.0f, 1.0f);
-
-        closestA = a1 + s * d1;
-        closestB = b1;
+        closestA      = a1 + s * d1;
+        closestB      = b1;
     } else {
         const float b     = Terathon::Dot(d1, d2);
         const float c     = Terathon::Dot(d1, a1 - b1);
@@ -80,13 +91,11 @@ collide(Handle handleA, const Capsule& capsuleA, Handle handleB, const Capsule& 
         return std::nullopt;
     }
 
-    const float dist = std::sqrt(distSq);
-
-    const Terathon::Vector3D normal = (dist > 1e-6f) ? delta / dist : Terathon::Vector3D{0.0f, 1.0f, 0.0f};
-
-    const float             depth    = rSum - dist;
-    const Terathon::Point3D witnessA = closestA - normal * capsuleA.getRadius();
-    const Terathon::Point3D witnessB = closestB + normal * capsuleB.getRadius();
+    const float              dist     = std::sqrt(distSq);
+    const Terathon::Vector3D normal   = (dist > 1e-6f) ? delta / dist : Terathon::Vector3D{0.0f, 1.0f, 0.0f};
+    const float              depth    = rSum - dist;
+    const Terathon::Point3D  witnessA = closestA - normal * capsuleA.getRadius();
+    const Terathon::Point3D  witnessB = closestB + normal * capsuleB.getRadius();
 
     return CollisionPair{handleA,
                          handleB,
@@ -97,58 +106,73 @@ collide(Handle handleA, const Capsule& capsuleA, Handle handleB, const Capsule& 
 }
 
 inline std::optional<CollisionPair>
-collide(Handle handleA, const Sphere& shapeA, Handle handleB, const Sphere& shapeB) {
-    const Terathon::Sphere3D sphereA              = Terathon::Unitize(shapeA.getSphere());
-    const Terathon::Sphere3D sphereB              = Terathon::Unitize(shapeB.getSphere());
-    const Terathon::Circle3D intersectionCircle   = Terathon::Antiwedge(sphereA, sphereB);
-    const float              intersectionRadiusSq = Terathon::SquaredRadiusNorm(intersectionCircle);
+collide(Handle handleA, const Capsule& capsule, Handle handleB, const Sphere& sphere) {
+    const Terathon::Sphere3D    s          = Terathon::Unitize(sphere.getSphere());
+    const Terathon::FlatPoint3D flatCenter = Terathon::FlatCenter(s);
+    const Terathon::Point3D     center     = {flatCenter.x, flatCenter.y, flatCenter.z};
+    const float                 radius     = std::sqrt(Terathon::SquaredRadiusNorm(s));
 
-    if (intersectionRadiusSq < 0.0f) {
+    const Terathon::Point3D  b1    = capsule.getA();
+    const Terathon::Point3D  b2    = capsule.getB();
+    const Terathon::Vector3D d     = b2 - b1;
+    const float              lenSq = Terathon::SquaredMag(d);
+
+    const float             t       = std::clamp(Terathon::Dot(center - b1, d) / lenSq, 0.0f, 1.0f);
+    const Terathon::Point3D closest = b1 + t * d;
+
+    const Terathon::Vector3D delta  = center - closest;
+    const float              distSq = Terathon::SquaredMag(delta);
+    const float              rSum   = radius + capsule.getRadius();
+
+    if (distSq >= rSum * rSum) {
         return std::nullopt;
     }
 
-    const Terathon::FlatPoint3D flatCenterA = Terathon::FlatCenter(sphereA);
-    const Terathon::FlatPoint3D flatCenterB = Terathon::FlatCenter(sphereB);
-    const Terathon::Point3D     centerA{flatCenterA.x, flatCenterA.y, flatCenterA.z};
-    const Terathon::Point3D     centerB{flatCenterB.x, flatCenterB.y, flatCenterB.z};
-    const float                 radiusA = std::sqrt(Terathon::SquaredRadiusNorm(sphereA));
-    const float                 radiusB = std::sqrt(Terathon::SquaredRadiusNorm(sphereB));
+    const float              dist     = std::sqrt(distSq);
+    const Terathon::Vector3D normal   = (dist > 1e-6f) ? delta / dist : Terathon::Vector3D{0.0f, 1.0f, 0.0f};
+    const float              depth    = rSum - dist;
+    const Terathon::Point3D  witnessA = center - normal * radius;
+    const Terathon::Point3D  witnessB = closest + normal * capsule.getRadius();
 
-    const Terathon::Vector3D delta = centerA - centerB;
-    const float              dist  = Terathon::Magnitude(delta);
-
-    Terathon::Vector3D contactNormal;
-    if (dist > 0.0f) {
-        contactNormal = Terathon::Normalize(delta);
-    } else {
-        contactNormal = Terathon::Vector3D{1.0f, 0.0f, 0.0f};
-    }
-
-    const Terathon::Point3D witnessA = centerA - contactNormal * radiusA;
-    const Terathon::Point3D witnessB = centerB + contactNormal * radiusB;
-
-    const Vector3D normal = {contactNormal.x, contactNormal.y, contactNormal.z};
-    const float    depth  = (intersectionRadiusSq > 0.0f) ? ((radiusA + radiusB) - dist) : 0.0f;
-
-    const Contact contact{normal, depth, {witnessA.x, witnessA.y, witnessA.z}, {witnessB.x, witnessB.y, witnessB.z}};
-    return CollisionPair{handleA, handleB, contact};
+    return CollisionPair{handleA,
+                         handleB,
+                         Contact{{normal.x, normal.y, normal.z},
+                                 depth,
+                                 {witnessA.x, witnessA.y, witnessA.z},
+                                 {witnessB.x, witnessB.y, witnessB.z}}};
 }
 
-// GJK+EPA fallback for any convex pair
-template <typename ShapeA, typename ShapeB>
-std::optional<CollisionPair> collide(Handle handleA, const ShapeA& shapeA, Handle handleB, const ShapeB& shapeB) {
-    Simplex simplex;
+inline std::optional<CollisionPair>
+collide(Handle handleA, const Sphere& sphereA, Handle handleB, const Sphere& sphereB) {
+    const Terathon::Sphere3D s1                 = Terathon::Unitize(sphereA.getSphere());
+    const Terathon::Sphere3D s2                 = Terathon::Unitize(sphereB.getSphere());
+    const Terathon::Circle3D intersectionCircle = Terathon::Antiwedge(s1, s2);
 
-    if (!gjk(shapeA, shapeB, simplex)) {
+    if (Terathon::SquaredRadiusNorm(intersectionCircle) < 0.0f) {
         return std::nullopt;
     }
 
-    std::expected<Contact, EpaFailure> contact = epa(shapeA, shapeB, simplex);
-    if (!contact) {
-        return std::nullopt;
-    }
+    const Terathon::FlatPoint3D fp1     = Terathon::FlatCenter(s1);
+    const Terathon::FlatPoint3D fp2     = Terathon::FlatCenter(s2);
+    const Terathon::Point3D     center1 = {fp1.x, fp1.y, fp1.z};
+    const Terathon::Point3D     center2 = {fp2.x, fp2.y, fp2.z};
+    const float                 radius1 = std::sqrt(Terathon::SquaredRadiusNorm(s1));
+    const float                 radius2 = std::sqrt(Terathon::SquaredRadiusNorm(s2));
 
-    return CollisionPair{handleA, handleB, {*contact}};
+    const Terathon::Vector3D delta  = center1 - center2;
+    const float              dist   = Terathon::Magnitude(delta);
+    const Terathon::Vector3D normal = (dist > 1e-6f) ? delta / dist : Terathon::Vector3D{1.0f, 0.0f, 0.0f};
+
+    const float             depth    = (radius1 + radius2) - dist;
+    const Terathon::Point3D witnessA = center1 - normal * radius1;
+    const Terathon::Point3D witnessB = center2 + normal * radius2;
+
+    return CollisionPair{handleA,
+                         handleB,
+                         Contact{{normal.x, normal.y, normal.z},
+                                 depth,
+                                 {witnessA.x, witnessA.y, witnessA.z},
+                                 {witnessB.x, witnessB.y, witnessB.z}}};
 }
 
 } // namespace vgeo::internal::cpu
