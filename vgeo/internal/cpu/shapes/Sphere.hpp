@@ -1,6 +1,9 @@
 #pragma once
 
+#include "TSRigid3D.h"
 #include "vgeo/Point3D.hpp"
+#include "vgeo/RayResult.hpp"
+#include "vgeo/Vector3D.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
@@ -49,7 +52,31 @@ public:
     }
 
     std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        return std::nullopt;
+        const Terathon::Line3D   ray    = Terathon::Wedge(origin, dir);
+        const Terathon::Dipole3D dipole = Terathon::Unitize(Terathon::Antiwedge(m_sphere, ray));
+
+        if (Terathon::SquaredRadiusNorm(dipole) < 0.0f) {
+            return std::nullopt;
+        }
+
+        const Terathon::FlatPoint3D dipoleFlatCenter = Terathon::FlatCenter(dipole);
+        const Terathon::Point3D     dipoleCenter     = {dipoleFlatCenter.x, dipoleFlatCenter.y, dipoleFlatCenter.z};
+        const float                 radius           = std::sqrt(Terathon::SquaredRadiusNorm(dipole));
+
+        const float tCenter = Terathon::Dot(dipoleCenter - origin, dir);
+        const float tHit    = tCenter - radius;
+
+        if (tHit < 0.0f) {
+            return std::nullopt;
+        }
+
+        const Terathon::FlatPoint3D sphereFlatCenter = Terathon::FlatCenter(m_sphere);
+        const Terathon::Point3D     sphereCenter{sphereFlatCenter.x, sphereFlatCenter.y, sphereFlatCenter.z};
+        const Terathon::Point3D     position = origin + dir * tHit;
+        const Terathon::Vector3D    normal   = Terathon::Normalize(position - sphereCenter);
+
+        return RayHit{
+            handle, Point3D{position.x, position.y, position.z}, Vector3D{normal.x, normal.y, normal.z}, tHit};
     }
 
 private:
