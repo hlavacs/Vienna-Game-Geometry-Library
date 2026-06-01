@@ -48,7 +48,7 @@ public:
         return {m_sphere.x + radius * dir.x, m_sphere.y + radius * dir.y, m_sphere.z + radius * dir.z};
     }
 
-    std::optional<RayHit> intersectRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         return std::nullopt;
     }
 
