@@ -83,6 +83,58 @@ public:
 
     std::vector<Handle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
         std::vector<Handle> hits;
+        if (m_grid.empty()) {
+            return hits;
+        }
+
+        // Clip the ray to it is inside the whole grid
+        const float gridMinX = m_boundsMin.x * m_cellSize;
+        const float gridMinY = m_boundsMin.y * m_cellSize;
+        const float gridMinZ = m_boundsMin.z * m_cellSize;
+        const float gridMaxX = (m_boundsMax.x + 1) * m_cellSize;
+        const float gridMaxY = (m_boundsMax.y + 1) * m_cellSize;
+        const float gridMaxZ = (m_boundsMax.z + 1) * m_cellSize;
+
+        float tEntry = 0.0f;
+        float tExit  = FLT_MAX;
+
+        for (int axis = 0; axis < 3; ++axis) {
+            const float originAxis = axis == 0 ? origin.x : axis == 1 ? origin.y : origin.z;
+            const float dirAxis    = axis == 0 ? dir.x : axis == 1 ? dir.y : dir.z;
+            const float slabMin    = axis == 0 ? gridMinX : axis == 1 ? gridMinY : gridMinZ;
+            const float slabMax    = axis == 0 ? gridMaxX : axis == 1 ? gridMaxY : gridMaxZ;
+
+            if (std::abs(dirAxis) < 1e-6f) {
+                if (originAxis < slabMin || originAxis > slabMax) {
+                    return hits;
+                }
+                continue;
+            }
+
+            float t0 = (slabMin - originAxis) / dirAxis;
+            float t1 = (slabMax - originAxis) / dirAxis;
+
+            if (t0 > t1) {
+                std::swap(t0, t1);
+            }
+
+            tEntry = std::max(tEntry, t0);
+            tExit  = std::min(tExit, t1);
+
+            if (tEntry > tExit) {
+                return hits;
+            }
+        }
+
+        const bool isOriginOutsideGrid = origin.x < gridMinX || origin.x >= gridMaxX || origin.y < gridMinY ||
+                                         origin.y >= gridMaxY || origin.z < gridMinZ || origin.z >= gridMaxZ;
+
+        if (isOriginOutsideGrid) {
+            constexpr float eps = 1e-6f;
+            origin.x += dir.x * (tEntry + eps);
+            origin.y += dir.y * (tEntry + eps);
+            origin.z += dir.z * (tEntry + eps);
+        }
 
         const int originCellX = static_cast<int>(std::floor(origin.x / m_cellSize));
         const int originCellY = static_cast<int>(std::floor(origin.y / m_cellSize));
