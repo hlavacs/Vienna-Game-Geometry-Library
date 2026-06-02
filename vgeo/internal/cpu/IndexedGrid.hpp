@@ -82,7 +82,8 @@ public:
     }
 
     std::vector<Handle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        std::vector<Handle> hits;
+        std::vector<Handle>        hits;
+        std::unordered_set<Handle> seen;
         if (m_grid.empty()) {
             return hits;
         }
@@ -164,7 +165,10 @@ public:
             // add handles of current cell
             if (m_grid.contains({currentX, currentY, currentZ})) {
                 for (const Handle& handle : m_grid.at({currentX, currentY, currentZ})) {
-                    hits.push_back(handle);
+                    if (!seen.contains(handle)) {
+                        seen.insert(handle);
+                        hits.push_back(handle);
+                    }
                 }
             }
 
