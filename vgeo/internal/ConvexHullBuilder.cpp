@@ -213,8 +213,8 @@ struct HorizonResult {
 HorizonResult findHorizon(const HullMesh& mesh, uint32_t seedFace, const Terathon::Point3D& eye, float epsilon) {
     HorizonResult         result;
     std::vector<bool>     visited(mesh.faces.size(), false);
-    std::vector<uint32_t> stack = {seedFace};
-    visited[seedFace]           = true;
+    std::vector<uint32_t> stack{seedFace};
+    visited[seedFace] = true;
 
     while (!stack.empty()) {
         uint32_t f = stack.back();

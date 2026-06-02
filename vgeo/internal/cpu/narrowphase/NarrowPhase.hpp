@@ -109,8 +109,8 @@ inline std::optional<CollisionPair>
 collide(Handle handleA, const Capsule& capsule, Handle handleB, const Sphere& sphere) {
     const Terathon::Sphere3D    s          = Terathon::Unitize(sphere.getSphere());
     const Terathon::FlatPoint3D flatCenter = Terathon::FlatCenter(s);
-    const Terathon::Point3D     center     = {flatCenter.x, flatCenter.y, flatCenter.z};
-    const float                 radius     = std::sqrt(Terathon::SquaredRadiusNorm(s));
+    const Terathon::Point3D     center{flatCenter.x, flatCenter.y, flatCenter.z};
+    const float                 radius = std::sqrt(Terathon::SquaredRadiusNorm(s));
 
     const Terathon::Point3D  b1    = capsule.getA();
     const Terathon::Point3D  b2    = capsule.getB();
@@ -152,10 +152,10 @@ collide(Handle handleA, const Sphere& sphereA, Handle handleB, const Sphere& sph
         return std::nullopt;
     }
 
-    const Terathon::FlatPoint3D fp1     = Terathon::FlatCenter(s1);
-    const Terathon::FlatPoint3D fp2     = Terathon::FlatCenter(s2);
-    const Terathon::Point3D     center1 = {fp1.x, fp1.y, fp1.z};
-    const Terathon::Point3D     center2 = {fp2.x, fp2.y, fp2.z};
+    const Terathon::FlatPoint3D fp1 = Terathon::FlatCenter(s1);
+    const Terathon::FlatPoint3D fp2 = Terathon::FlatCenter(s2);
+    const Terathon::Point3D     center1{fp1.x, fp1.y, fp1.z};
+    const Terathon::Point3D     center2{fp2.x, fp2.y, fp2.z};
     const float                 radius1 = std::sqrt(Terathon::SquaredRadiusNorm(s1));
     const float                 radius2 = std::sqrt(Terathon::SquaredRadiusNorm(s2));
 

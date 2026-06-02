@@ -60,8 +60,8 @@ public:
         }
 
         const Terathon::FlatPoint3D dipoleFlatCenter = Terathon::FlatCenter(dipole);
-        const Terathon::Point3D     dipoleCenter     = {dipoleFlatCenter.x, dipoleFlatCenter.y, dipoleFlatCenter.z};
-        const float                 radius           = std::sqrt(Terathon::SquaredRadiusNorm(dipole));
+        const Terathon::Point3D     dipoleCenter{dipoleFlatCenter.x, dipoleFlatCenter.y, dipoleFlatCenter.z};
+        const float                 radius = std::sqrt(Terathon::SquaredRadiusNorm(dipole));
 
         const float tCenter = Terathon::Dot(dipoleCenter - origin, dir);
         const float tHit    = tCenter - radius;

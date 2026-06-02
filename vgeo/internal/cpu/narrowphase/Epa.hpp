@@ -238,10 +238,10 @@ inline Contact buildCollisionContactFromFace(const EpaPolytope& polytope, const 
     const Terathon::Point3D& b1 = polytope.supportB[face.b];
     const Terathon::Point3D& b2 = polytope.supportB[face.c];
 
-    Terathon::Point3D wA = {
+    Terathon::Point3D wA{
         u * a0.x + v * a1.x + w * a2.x, u * a0.y + v * a1.y + w * a2.y, u * a0.z + v * a1.z + w * a2.z};
 
-    Terathon::Point3D wB = {
+    Terathon::Point3D wB{
         u * b0.x + v * b1.x + w * b2.x, u * b0.y + v * b1.y + w * b2.y, u * b0.z + v * b1.z + w * b2.z};
 
     Contact contact{};
@@ -269,10 +269,11 @@ std::expected<Contact, EpaFailure> epa(const ShapeA& shapeA, const ShapeB& shape
         Terathon::Vector3D normal   = closest.normal;
         float              faceDist = closest.distanceToOrigin;
 
-        auto               supportA      = shapeA.support(normal);
-        auto               supportB      = shapeB.support(-normal);
-        Terathon::Vector3D minkowskiDiff = {supportA.x - supportB.x, supportA.y - supportB.y, supportA.z - supportB.z};
-        float              supportDist   = Terathon::Dot(normal, minkowskiDiff);
+        auto supportA = shapeA.support(normal);
+        auto supportB = shapeB.support(-normal);
+
+        Terathon::Vector3D minkowskiDiff{supportA.x - supportB.x, supportA.y - supportB.y, supportA.z - supportB.z};
+        float              supportDist = Terathon::Dot(normal, minkowskiDiff);
 
         if (std::abs(supportDist - faceDist) <= polytope->tolerance) {
             Contact contact = buildCollisionContactFromFace(*polytope, closest, faceDist);
