@@ -155,8 +155,25 @@ public:
         return queryPair(handleA, handleB).has_value();
     }
 
-    RayResult castRay(Point3D, Vector3D) const {
-        return {};
+    RayResult castRay(Point3D origin, Vector3D dir) const {
+        const Terathon::Point3D   terathonOrigin{origin.x, origin.y, origin.z};
+        const Terathon::Vector3D  terathonDir{dir.x, dir.y, dir.z};
+        const std::vector<Handle> candidates = m_broadphase.castRay(terathonOrigin, terathonDir);
+
+        RayResult result;
+
+        for (const Handle& handle : candidates) {
+            ShapeVariant          shape = getShape(handle);
+            std::optional<RayHit> hit =
+                std::visit([&](const auto& s) { return s.intersectRay(handle, terathonOrigin, terathonDir); }, shape);
+
+            if (hit) {
+                result.hits.push_back(*hit);
+            }
+        }
+
+        std::ranges::sort(result.hits, std::less{}, &RayHit::distance);
+        return result;
     }
 
 private:
