@@ -7,6 +7,7 @@
 
 #include <TSVector3D.h>
 
+#include <cfloat>
 #include <optional>
 
 namespace vgeo::internal::cpu {
@@ -39,7 +40,62 @@ public:
     }
 
     std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        return std::nullopt;
+        float tEntry  = 0.0f;
+        float tExit   = FLT_MAX;
+        int   hitAxis = 0;
+
+        for (int axis = 0; axis < 3; ++axis) {
+            const float originAxis = axis == 0 ? origin.x : axis == 1 ? origin.y : origin.z;
+            const float dirAxis    = axis == 0 ? dir.x : axis == 1 ? dir.y : dir.z;
+            const float slabMin    = axis == 0 ? m_min.x : axis == 1 ? m_min.y : m_min.z;
+            const float slabMax    = axis == 0 ? m_max.x : axis == 1 ? m_max.y : m_max.z;
+
+            if (std::abs(dirAxis) < 1e-6f) {
+                if (originAxis < slabMin || originAxis > slabMax) {
+                    return std::nullopt;
+                }
+                continue;
+            }
+
+            float t0 = (slabMin - originAxis) / dirAxis;
+            float t1 = (slabMax - originAxis) / dirAxis;
+
+            if (t0 > t1) {
+                std::swap(t0, t1);
+            }
+
+            if (t0 > tEntry) {
+                tEntry  = t0;
+                hitAxis = axis;
+            }
+            tExit = std::min(tExit, t1);
+
+            if (tEntry > tExit) {
+                return std::nullopt;
+            }
+        }
+
+        if (tEntry < 0.0f) {
+            return std::nullopt;
+        }
+
+        const Terathon::Point3D position = origin + dir * tEntry;
+
+        Terathon::Vector3D normal{0.0f, 0.0f, 0.0f};
+        switch (hitAxis) {
+            case 0:
+                normal.x = dir.x > 0.0f ? -1.0f : 1.0f;
+                break;
+            case 1:
+                normal.y = dir.y > 0.0f ? -1.0f : 1.0f;
+                break;
+            case 2:
+                normal.z = dir.z > 0.0f ? -1.0f : 1.0f;
+                break;
+        }
+
+        return RayHit{
+            handle, Point3D{position.x, position.y, position.z}, Vector3D{normal.x, normal.y, normal.z}, tEntry};
     }
 
 private:
