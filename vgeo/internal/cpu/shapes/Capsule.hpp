@@ -7,6 +7,8 @@
 #include <TSVector3D.h>
 
 #include <algorithm>
+#include <cfloat>
+#include <cmath>
 
 namespace vgeo::internal::cpu {
 
@@ -42,13 +44,130 @@ public:
     }
 
     std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        return std::nullopt;
+        const Terathon::Vector3D axis    = m_b - m_a;
+        const float              axisLen = Terathon::Magnitude(axis);
+        const Terathon::Vector3D axisDir = Terathon::Normalize(axis);
+
+        const std::optional<float> tCylinder = intersectCylinder(origin, dir, axisDir, axisLen);
+        const std::optional<float> tCapA     = intersectCap(origin, dir, m_a, -axisDir);
+        const std::optional<float> tCapB     = intersectCap(origin, dir, m_b, axisDir);
+
+        enum class HitPart { Cylinder, CapA, CapB };
+        HitPart hitPart = HitPart::Cylinder;
+
+        float tNearest = FLT_MAX;
+        if (tCylinder && *tCylinder < tNearest) {
+            tNearest = *tCylinder;
+            hitPart  = HitPart::Cylinder;
+        }
+        if (tCapA && *tCapA < tNearest) {
+            tNearest = *tCapA;
+            hitPart  = HitPart::CapA;
+        }
+        if (tCapB && *tCapB < tNearest) {
+            tNearest = *tCapB;
+            hitPart  = HitPart::CapB;
+        }
+
+        if (tNearest == FLT_MAX) {
+            return std::nullopt;
+        }
+
+        const Terathon::Point3D position = origin + dir * tNearest;
+        Terathon::Vector3D      normal;
+
+        switch (hitPart) {
+            case HitPart::Cylinder: {
+                const float             proj          = Terathon::Dot(position - m_a, axisDir);
+                const Terathon::Point3D closestOnAxis = m_a + axisDir * proj;
+                normal                                = Terathon::Normalize(position - closestOnAxis);
+                break;
+            }
+            case HitPart::CapA:
+                normal = Terathon::Normalize(position - m_a);
+                break;
+            case HitPart::CapB:
+                normal = Terathon::Normalize(position - m_b);
+                break;
+        }
+
+        return RayHit{
+            handle, Point3D{position.x, position.y, position.z}, Vector3D{normal.x, normal.y, normal.z}, tNearest};
     }
 
 private:
     Terathon::Point3D m_a;
     Terathon::Point3D m_b;
     float             m_radius;
+
+    [[nodiscard]] std::optional<float> intersectCylinder(Terathon::Point3D  origin,
+                                                         Terathon::Vector3D dir,
+                                                         Terathon::Vector3D axisDir,
+                                                         float              axisLen) const {
+        const Terathon::Vector3D oc           = origin - m_a;
+        const Terathon::Vector3D d            = Terathon::Reject(dir, axisDir);
+        const Terathon::Vector3D f            = Terathon::Reject(oc, axisDir);
+        const float              a            = Terathon::Dot(d, d);
+        const float              b            = 2.0f * Terathon::Dot(d, f);
+        const float              c            = Terathon::Dot(f, f) - m_radius * m_radius;
+        const float              discriminant = b * b - 4.0f * a * c;
+
+        if (discriminant < 0.0f || a <= 1e-6f) {
+            return std::nullopt;
+        }
+
+        const float sqrtDiscriminant = std::sqrt(discriminant);
+        const float t0               = (-b - sqrtDiscriminant) / (2.0f * a);
+        const float t1               = (-b + sqrtDiscriminant) / (2.0f * a);
+        const float t                = t0 >= 0.0f ? t0 : t1;
+
+        if (t < 0.0f) {
+            return std::nullopt;
+        }
+
+        const Terathon::Point3D  hit   = origin + dir * t;
+        const Terathon::Vector3D toHit = hit - m_a;
+        const float              proj  = Terathon::Dot(toHit, axisDir);
+
+        if (proj < 0.0f || proj > axisLen) {
+            return std::nullopt;
+        }
+
+        return t;
+    }
+
+    [[nodiscard]] std::optional<float> intersectCap(Terathon::Point3D  origin,
+                                                    Terathon::Vector3D dir,
+                                                    Terathon::Point3D  capCenter,
+                                                    Terathon::Vector3D hemisphereDir) const {
+        const Terathon::Vector3D oc   = origin - capCenter;
+        const float              a    = Terathon::Dot(dir, dir);
+        const float              b    = 2.0f * Terathon::Dot(dir, oc);
+        const float              c    = Terathon::Dot(oc, oc) - m_radius * m_radius;
+        const float              disc = b * b - 4.0f * a * c;
+
+        if (disc < 0.0f) {
+            return std::nullopt;
+        }
+
+        const float sqrtDisc = std::sqrt(disc);
+        const float t0       = (-b - sqrtDisc) / (2.0f * a);
+        const float t1       = (-b + sqrtDisc) / (2.0f * a);
+        const float t        = t0 >= 0.0f ? t0 : t1;
+
+        if (t < 0.0f) {
+            return std::nullopt;
+        }
+
+        const Terathon::Point3D  hit    = origin + dir * t;
+        const Terathon::Vector3D normal = Terathon::Normalize(hit - capCenter);
+
+        if (Terathon::Dot(normal, hemisphereDir) < 0.0f) {
+            return std::nullopt;
+        }
+
+        return t;
+    }
 };
 
 template <>
