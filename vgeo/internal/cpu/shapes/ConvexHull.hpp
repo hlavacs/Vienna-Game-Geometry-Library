@@ -8,6 +8,7 @@
 
 #include <TSVector3D.h>
 
+#include <cfloat>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -60,7 +61,58 @@ public:
     }
 
     std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        return std::nullopt;
+        float              tNearest = FLT_MAX;
+        Terathon::Vector3D normalNearest;
+
+        for (size_t i = 0; i < m_indices.size(); i += 3) {
+            const Terathon::Point3D& v0 = m_vertices[m_indices[i]];
+            const Terathon::Point3D& v1 = m_vertices[m_indices[i + 1]];
+            const Terathon::Point3D& v2 = m_vertices[m_indices[i + 2]];
+
+            const Terathon::Vector3D e1          = v1 - v0;
+            const Terathon::Vector3D e2          = v2 - v0;
+            const Terathon::Vector3D h           = Terathon::Cross(dir, e2);
+            const float              determinant = Terathon::Dot(e1, h);
+
+            if (determinant < 1e-6f) {
+                continue;
+            }
+
+            const float              f = 1.0f / determinant;
+            const Terathon::Vector3D s = origin - v0;
+            const float              u = f * Terathon::Dot(s, h);
+
+            if (u < 0.0f || u > 1.0f) {
+                continue;
+            }
+
+            const Terathon::Vector3D q = Terathon::Cross(s, e1);
+            const float              v = f * Terathon::Dot(dir, q);
+
+            if (v < 0.0f || u + v > 1.0f) {
+                continue;
+            }
+
+            const float t = f * Terathon::Dot(e2, q);
+
+            if (t < 0.0f || t >= tNearest) {
+                continue;
+            }
+
+            tNearest      = t;
+            normalNearest = Terathon::Normalize(Terathon::Cross(e1, e2));
+        }
+
+        if (tNearest == FLT_MAX) {
+            return std::nullopt;
+        }
+
+        const Terathon::Point3D position = origin + dir * tNearest;
+
+        return RayHit{handle,
+                      Point3D{position.x, position.y, position.z},
+                      Vector3D{normalNearest.x, normalNearest.y, normalNearest.z},
+                      tNearest};
     }
 
 private:
