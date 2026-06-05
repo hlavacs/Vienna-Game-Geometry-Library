@@ -51,7 +51,8 @@ public:
         return {m_sphere.x + radius * dir.x, m_sphere.y + radius * dir.y, m_sphere.z + radius * dir.z};
     }
 
-    std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    [[nodiscard]] std::optional<RayHit>
+    intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         const Terathon::Line3D   ray    = Terathon::Wedge(origin, dir);
         const Terathon::Dipole3D dipole = Terathon::Unitize(Terathon::Antiwedge(m_sphere, ray));
 

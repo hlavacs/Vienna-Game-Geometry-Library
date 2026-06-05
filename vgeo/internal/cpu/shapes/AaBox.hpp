@@ -39,7 +39,8 @@ public:
             dir.x >= 0.0f ? m_max.x : m_min.x, dir.y >= 0.0f ? m_max.y : m_min.y, dir.z >= 0.0f ? m_max.z : m_min.z};
     }
 
-    std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    [[nodiscard]] std::optional<RayHit>
+    intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         float tEntry  = 0.0f;
         float tExit   = FLT_MAX;
         int   hitAxis = 0;

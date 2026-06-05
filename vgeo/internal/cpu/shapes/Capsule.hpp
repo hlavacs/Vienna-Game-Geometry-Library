@@ -43,7 +43,8 @@ public:
         return furthestEndpoint + m_radius * dir;
     }
 
-    std::optional<RayHit> intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    [[nodiscard]] std::optional<RayHit>
+    intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         const Terathon::Vector3D axis    = m_b - m_a;
         const float              axisLen = Terathon::Magnitude(axis);
         const Terathon::Vector3D axisDir = Terathon::Normalize(axis);
