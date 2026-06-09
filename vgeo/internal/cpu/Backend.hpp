@@ -7,10 +7,6 @@
 #include "vgeo/Shape.hpp"
 #include "vgeo/ShapeType.hpp"
 #include "vgeo/Vec3.hpp"
-#include "vgeo/descriptors/AaBoxDesc.hpp"
-#include "vgeo/descriptors/CapsuleDesc.hpp"
-#include "vgeo/descriptors/ConvexHullDesc.hpp"
-#include "vgeo/descriptors/SphereDesc.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 #include "vgeo/internal/cpu/BroadPhase.hpp"
@@ -22,6 +18,7 @@
 
 #include <cassert>
 #include <optional>
+#include <span>
 #include <variant>
 #include <vector>
 
@@ -41,20 +38,20 @@ public:
 
     // Geometry
 
-    GeometryHandle defineAaBox(const AaBoxDesc& desc) {
-        return m_aaBoxes.add(AaBox{desc.min, desc.max});
+    GeometryHandle defineAaBox(Vec3 halfExtents) {
+        return m_aaBoxes.add(AaBox{halfExtents});
     }
 
-    GeometryHandle defineCapsule(const CapsuleDesc& desc) {
-        return m_capsules.add(Capsule{desc.a, desc.b, desc.radius});
+    GeometryHandle defineCapsule(float halfLength, float radius) {
+        return m_capsules.add(Capsule{halfLength, radius});
     }
 
-    GeometryHandle defineConvexHull(const ConvexHullDesc& desc) {
-        return m_convexHulls.add(ConvexHull{ConvexHullBuilder::build(desc.points)});
+    GeometryHandle defineConvexHull(std::span<const Vec3> points) {
+        return m_convexHulls.add(ConvexHull{ConvexHullBuilder::build(points)});
     }
 
-    GeometryHandle defineSphere(const SphereDesc& desc) {
-        return m_spheres.add(Sphere{desc.center, desc.radius});
+    GeometryHandle defineSphere(float radius) {
+        return m_spheres.add(Sphere{radius});
     }
 
     void removeGeometry(GeometryHandle geometry) {

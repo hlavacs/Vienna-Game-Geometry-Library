@@ -7,39 +7,41 @@ using namespace vgeo::internal::cpu;
 using Catch::Approx;
 
 TEST_CASE("Capsule centroid", "[Capsule]") {
-    Capsule capsule{{0.0f, 0.0f, 0.0f}, {2.0f, 4.0f, 6.0f}, 0.5f};
+    Capsule capsule{3.0f, 0.5f};
     auto    c = capsule.centroid();
 
-    CHECK(c.x == 1.0f);
-    CHECK(c.y == 2.0f);
-    CHECK(c.z == 3.0f);
+    CHECK(c.x == 0.0f);
+    CHECK(c.y == 0.0f);
+    CHECK(c.z == 0.0f);
 }
 
 TEST_CASE("Capsule computeBv (Aabb)", "[Capsule]") {
-    Capsule capsule{{-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, 1.0f};
+    // Y-aligned: endpoints at {0,-1,0} and {0,1,0}, radius=1
+    // AABB: min={-1,-2,-1}, max={1,2,1}
+    Capsule capsule{1.0f, 1.0f};
     auto    bv = capsule.computeBv<Aabb>();
 
-    CHECK(bv.getMin().x == -2.0f);
-    CHECK(bv.getMin().y == -1.0f);
+    CHECK(bv.getMin().x == -1.0f);
+    CHECK(bv.getMin().y == -2.0f);
     CHECK(bv.getMin().z == -1.0f);
-    CHECK(bv.getMax().x == 2.0f);
-    CHECK(bv.getMax().y == 1.0f);
+    CHECK(bv.getMax().x == 1.0f);
+    CHECK(bv.getMax().y == 2.0f);
     CHECK(bv.getMax().z == 1.0f);
 }
 
-TEST_CASE("Capsule support along axes", "[Capsule]") {
-    Capsule capsule{{0.0f, -1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, 1.0f};
+TEST_CASE("Capsule support along axis", "[Capsule]") {
+    Capsule capsule{1.0f, 1.0f};
 
     auto a = capsule.support({0.0f, 1.0f, 0.0f});
-    CHECK(a.y == Approx(2.0f)); // top endpoint + radius
+    CHECK(a.y == Approx(2.0f));
 
     auto b = capsule.support({0.0f, -1.0f, 0.0f});
-    CHECK(b.y == Approx(-2.0f)); // bottom endpoint - radius
+    CHECK(b.y == Approx(-2.0f));
 }
 
 TEST_CASE("Capsule support perpendicular to axis", "[Capsule]") {
-    Capsule capsule{{0.0f, -1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, 1.0f};
+    Capsule capsule{1.0f, 1.0f};
 
     auto a = capsule.support({1.0f, 0.0f, 0.0f});
-    CHECK(a.x == Approx(1.0f)); // radius in x direction
+    CHECK(a.x == Approx(1.0f));
 }

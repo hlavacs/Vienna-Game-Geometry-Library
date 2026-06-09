@@ -5,14 +5,11 @@
 #include "vgeo/InstanceHandle.hpp"
 #include "vgeo/RayResult.hpp"
 #include "vgeo/Vec3.hpp"
-#include "vgeo/descriptors/AaBoxDesc.hpp"
-#include "vgeo/descriptors/CapsuleDesc.hpp"
-#include "vgeo/descriptors/ConvexHullDesc.hpp"
-#include "vgeo/descriptors/SphereDesc.hpp"
 #include "vgeo/internal/cpu/Backend.hpp"
 #include "vgeo/internal/cpu/Bvh.hpp"
 
 #include <optional>
+#include <span>
 
 struct VkPhysicalDevice_T;
 
@@ -30,20 +27,20 @@ public:
 
     // Geometry
 
-    GeometryHandle defineAaBox(const AaBoxDesc& desc) {
-        return m_backend.defineAaBox(desc);
+    GeometryHandle defineAaBox(Vec3 halfExtents) {
+        return m_backend.defineAaBox(halfExtents);
     }
 
-    GeometryHandle defineCapsule(const CapsuleDesc& desc) {
-        return m_backend.defineCapsule(desc);
+    GeometryHandle defineCapsule(float halfLength, float radius) {
+        return m_backend.defineCapsule(halfLength, radius);
     }
 
-    GeometryHandle defineConvexHull(const ConvexHullDesc& desc) {
-        return m_backend.defineConvexHull(desc);
+    GeometryHandle defineConvexHull(std::span<const Vec3> points) {
+        return m_backend.defineConvexHull(points);
     }
 
-    GeometryHandle defineSphere(const SphereDesc& desc) {
-        return m_backend.defineSphere(desc);
+    GeometryHandle defineSphere(float radius) {
+        return m_backend.defineSphere(radius);
     }
 
     void removeGeometry(GeometryHandle geometry) {

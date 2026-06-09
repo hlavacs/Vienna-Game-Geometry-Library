@@ -6,10 +6,6 @@
 #include "vgeo/InstanceHandle.hpp"             // IWYU pragma: export
 #include "vgeo/RayResult.hpp"                  // IWYU pragma: export
 #include "vgeo/Vec3.hpp"                       // IWYU pragma: export
-#include "vgeo/descriptors/AaBoxDesc.hpp"      // IWYU pragma: export
-#include "vgeo/descriptors/CapsuleDesc.hpp"    // IWYU pragma: export
-#include "vgeo/descriptors/ConvexHullDesc.hpp" // IWYU pragma: export
-#include "vgeo/descriptors/SphereDesc.hpp"     // IWYU pragma: export
 #include "vgeo/internal/cpu/Aabb.hpp"          // IWYU pragma: export
 #include "vgeo/internal/cpu/BruteForce.hpp"    // IWYU pragma: export
 #include "vgeo/internal/cpu/Bvh.hpp"           // IWYU pragma: export

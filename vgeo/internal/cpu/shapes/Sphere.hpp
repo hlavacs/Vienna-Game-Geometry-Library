@@ -18,12 +18,7 @@ class Sphere {
 public:
     Sphere() = default;
 
-    Sphere(Vec3 center, float radius)
-        : m_sphere{-1.0f,
-                   center.x,
-                   center.y,
-                   center.z,
-                   -(Terathon::SquaredMag(Terathon::Point3D{center.x, center.y, center.z}) - radius * radius) * 0.5f} {}
+    explicit Sphere(float radius) : m_sphere{-1.0f, 0.0f, 0.0f, 0.0f, radius * radius * 0.5f} {}
 
     [[nodiscard]] Terathon::Sphere3D getSphere() const {
         return m_sphere;

@@ -16,7 +16,9 @@ class AaBox {
 public:
     AaBox() = default;
 
-    AaBox(Vec3 min, Vec3 max) : m_min{min.x, min.y, min.z}, m_max{max.x, max.y, max.z} {}
+    explicit AaBox(Vec3 halfExtents)
+        : m_min{-halfExtents.x, -halfExtents.y, -halfExtents.z},
+          m_max{halfExtents.x, halfExtents.y, halfExtents.z} {}
 
     [[nodiscard]] Terathon::Point3D getMin() const {
         return m_min;

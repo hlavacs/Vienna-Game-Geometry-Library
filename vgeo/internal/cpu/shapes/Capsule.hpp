@@ -16,7 +16,8 @@ class Capsule {
 public:
     Capsule() = default;
 
-    Capsule(Vec3 a, Vec3 b, float radius) : m_a{a.x, a.y, a.z}, m_b{b.x, b.y, b.z}, m_radius{radius} {}
+    Capsule(float halfLength, float radius)
+        : m_a{0.0f, -halfLength, 0.0f}, m_b{0.0f, halfLength, 0.0f}, m_radius{radius} {}
 
     [[nodiscard]] Terathon::Point3D getA() const {
         return m_a;
