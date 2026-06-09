@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -8,7 +8,7 @@
 namespace vgeo::internal {
 
 struct ConvexHullData {
-    std::vector<Point3D>  vertices;
+    std::vector<Vec3>     vertices;
     std::vector<uint32_t> indices;
 };
 

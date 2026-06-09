@@ -2,7 +2,7 @@
 
 namespace vgeo {
 
-struct Vector3D {
+struct Vec3 {
     float x;
     float y;
     float z;

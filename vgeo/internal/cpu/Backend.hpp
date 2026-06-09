@@ -2,9 +2,8 @@
 
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/Handle.hpp"
-#include "vgeo/Point3D.hpp"
 #include "vgeo/RayResult.hpp"
-#include "vgeo/Vector3D.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/descriptors/AaBoxDesc.hpp"
 #include "vgeo/descriptors/CapsuleDesc.hpp"
 #include "vgeo/descriptors/ConvexHullDesc.hpp"
@@ -155,7 +154,7 @@ public:
         return queryPair(handleA, handleB).has_value();
     }
 
-    RayResult castRay(Point3D origin, Vector3D dir) const {
+    RayResult castRay(Vec3 origin, Vec3 dir) const {
         const Terathon::Point3D   terathonOrigin{origin.x, origin.y, origin.z};
         const Terathon::Vector3D  terathonDir{dir.x, dir.y, dir.z};
         const std::vector<Handle> candidates = m_broadphase.castRay(terathonOrigin, terathonDir);

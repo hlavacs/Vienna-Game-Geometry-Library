@@ -1,5 +1,5 @@
 #pragma once
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
@@ -16,7 +16,7 @@ class Capsule {
 public:
     Capsule() = default;
 
-    Capsule(Point3D a, Point3D b, float radius) : m_a{a.x, a.y, a.z}, m_b{b.x, b.y, b.z}, m_radius{radius} {}
+    Capsule(Vec3 a, Vec3 b, float radius) : m_a{a.x, a.y, a.z}, m_b{b.x, b.y, b.z}, m_radius{radius} {}
 
     [[nodiscard]] Terathon::Point3D getA() const {
         return m_a;
@@ -93,7 +93,7 @@ public:
         }
 
         return RayHit{
-            handle, Point3D{position.x, position.y, position.z}, Vector3D{normal.x, normal.y, normal.z}, tNearest};
+            handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tNearest};
     }
 
 private:

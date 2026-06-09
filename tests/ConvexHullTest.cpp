@@ -1,6 +1,6 @@
 #include "vgeo/internal/cpu/shapes/ConvexHull.hpp"
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 
 #include <catch2/catch_approx.hpp>
@@ -12,7 +12,7 @@ using namespace vgeo::internal::cpu;
 using Catch::Approx;
 
 static ConvexHullData buildTetrahedron() {
-    std::vector<vgeo::Point3D> points{{0.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {0.0f, 0.0f, 2.0f}};
+    std::vector<vgeo::Vec3> points{{0.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {0.0f, 0.0f, 2.0f}};
     return ConvexHullBuilder::build(points);
 }
 

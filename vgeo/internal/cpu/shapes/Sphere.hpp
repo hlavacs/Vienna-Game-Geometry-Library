@@ -1,9 +1,8 @@
 #pragma once
 
 #include "TSRigid3D.h"
-#include "vgeo/Point3D.hpp"
 #include "vgeo/RayResult.hpp"
-#include "vgeo/Vector3D.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
@@ -19,7 +18,7 @@ class Sphere {
 public:
     Sphere() = default;
 
-    Sphere(Point3D center, float radius)
+    Sphere(Vec3 center, float radius)
         : m_sphere{-1.0f,
                    center.x,
                    center.y,
@@ -77,7 +76,7 @@ public:
         const Terathon::Vector3D    normal   = Terathon::Normalize(position - sphereCenter);
 
         return RayHit{
-            handle, Point3D{position.x, position.y, position.z}, Vector3D{normal.x, normal.y, normal.z}, tHit};
+            handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tHit};
     }
 
 private:

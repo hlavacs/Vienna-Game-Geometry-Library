@@ -1,12 +1,12 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 
 namespace vgeo {
 
 struct AaBoxDesc {
-    Point3D min;
-    Point3D max;
+    Vec3 min;
+    Vec3 max;
 };
 
 } // namespace vgeo

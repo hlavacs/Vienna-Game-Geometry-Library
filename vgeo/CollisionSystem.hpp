@@ -2,9 +2,8 @@
 
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/Handle.hpp"
-#include "vgeo/Point3D.hpp"
 #include "vgeo/RayResult.hpp"
-#include "vgeo/Vector3D.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/descriptors/AaBoxDesc.hpp"
 #include "vgeo/descriptors/CapsuleDesc.hpp"
 #include "vgeo/descriptors/ConvexHullDesc.hpp"
@@ -64,7 +63,7 @@ public:
         return m_backend.overlaps(shapeA, shapeB);
     }
 
-    RayResult castRay(Point3D origin, Vector3D dir) const {
+    RayResult castRay(Vec3 origin, Vec3 dir) const {
         return m_backend.castRay(origin, dir);
     }
 

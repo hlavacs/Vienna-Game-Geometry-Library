@@ -3,9 +3,8 @@
 #include "vgeo/CollisionResults.hpp"           // IWYU pragma: export
 #include "vgeo/CollisionSystem.hpp"            // IWYU pragma: export
 #include "vgeo/Handle.hpp"                     // IWYU pragma: export
-#include "vgeo/Point3D.hpp"                    // IWYU pragma: export
 #include "vgeo/RayResult.hpp"                  // IWYU pragma: export
-#include "vgeo/Vector3D.hpp"                   // IWYU pragma: export
+#include "vgeo/Vec3.hpp"                       // IWYU pragma: export
 #include "vgeo/descriptors/AaBoxDesc.hpp"      // IWYU pragma: export
 #include "vgeo/descriptors/CapsuleDesc.hpp"    // IWYU pragma: export
 #include "vgeo/descriptors/ConvexHullDesc.hpp" // IWYU pragma: export

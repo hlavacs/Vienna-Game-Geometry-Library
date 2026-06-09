@@ -1,6 +1,5 @@
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 
-#include "vgeo/Point3D.hpp"
 #include "vgeo/internal/ConvexHullData.hpp"
 #include "vgeo/internal/PolytopeUtils.hpp"
 
@@ -33,10 +32,10 @@ struct HullMesh {
     std::vector<Face>              faces;
 };
 
-std::vector<Terathon::Point3D> convertPoints(std::span<const vgeo::Point3D> inputPoints) {
+std::vector<Terathon::Point3D> convertPoints(std::span<const vgeo::Vec3> inputPoints) {
     std::vector<Terathon::Point3D> points;
     points.reserve(inputPoints.size());
-    for (const vgeo::Point3D& p : inputPoints) {
+    for (const vgeo::Vec3& p : inputPoints) {
         points.emplace_back(p.x, p.y, p.z);
     }
     return points;
@@ -333,7 +332,7 @@ void redistributePoints(HullMesh&                          mesh,
     }
 }
 
-HullMesh computeHull(std::span<const vgeo::Point3D> inputPoints) {
+HullMesh computeHull(std::span<const vgeo::Vec3> inputPoints) {
     std::vector<Terathon::Point3D> points  = convertPoints(inputPoints);
     float                          epsilon = vgeo::internal::calculateRelativeEpsilon(points);
     HullMesh                       mesh    = buildInitialTetrahedron(points);
@@ -353,7 +352,7 @@ HullMesh computeHull(std::span<const vgeo::Point3D> inputPoints) {
 
 namespace vgeo::internal {
 
-ConvexHullData ConvexHullBuilder::build(std::span<const vgeo::Point3D> inputPoints) {
+ConvexHullData ConvexHullBuilder::build(std::span<const vgeo::Vec3> inputPoints) {
     assert(inputPoints.size() >= 4);
 
     HullMesh mesh = computeHull(inputPoints);

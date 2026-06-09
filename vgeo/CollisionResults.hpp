@@ -1,18 +1,17 @@
 #pragma once
 
 #include "vgeo/Handle.hpp"
-#include "vgeo/Point3D.hpp"
-#include "vgeo/Vector3D.hpp"
+#include "vgeo/Vec3.hpp"
 
 #include <vector>
 
 namespace vgeo {
 
 struct Contact {
-    Vector3D normal; // pointing from B to A
-    float    depth;
-    Point3D  witnessA;
-    Point3D  witnessB;
+    Vec3  normal; // pointing from B to A
+    float depth;
+    Vec3  witnessA;
+    Vec3  witnessB;
 };
 
 struct CollisionPair {

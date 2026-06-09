@@ -1,12 +1,12 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 
 namespace vgeo {
 
 struct SphereDesc {
-    Point3D center;
-    float   radius;
+    Vec3  center;
+    float radius;
 };
 
 } // namespace vgeo

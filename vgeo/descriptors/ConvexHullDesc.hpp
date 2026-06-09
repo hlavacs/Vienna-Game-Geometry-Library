@@ -1,13 +1,13 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 
 #include <vector>
 
 namespace vgeo {
 
 struct ConvexHullDesc {
-    std::vector<Point3D> points;
+    std::vector<Vec3> points;
 };
 
 } // namespace vgeo

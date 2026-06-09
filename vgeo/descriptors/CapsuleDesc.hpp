@@ -1,13 +1,13 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 
 namespace vgeo {
 
 struct CapsuleDesc {
-    Point3D a;
-    Point3D b;
-    float   radius;
+    Vec3  a;
+    Vec3  b;
+    float radius;
 };
 
 } // namespace vgeo

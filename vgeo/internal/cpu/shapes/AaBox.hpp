@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
@@ -16,7 +16,7 @@ class AaBox {
 public:
     AaBox() = default;
 
-    AaBox(Point3D min, Point3D max) : m_min{min.x, min.y, min.z}, m_max{max.x, max.y, max.z} {}
+    AaBox(Vec3 min, Vec3 max) : m_min{min.x, min.y, min.z}, m_max{max.x, max.y, max.z} {}
 
     [[nodiscard]] Terathon::Point3D getMin() const {
         return m_min;
@@ -96,7 +96,7 @@ public:
         }
 
         return RayHit{
-            handle, Point3D{position.x, position.y, position.z}, Vector3D{normal.x, normal.y, normal.z}, tEntry};
+            handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tEntry};
     }
 
 private:

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/ConvexHullData.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
@@ -20,7 +20,7 @@ public:
     ConvexHull() = default;
 
     explicit ConvexHull(internal::ConvexHullData data) {
-        for (const Point3D& v : data.vertices) {
+        for (const Vec3& v : data.vertices) {
             m_vertices.emplace_back(v.x, v.y, v.z);
         }
         m_indices.assign(data.indices.begin(), data.indices.end());
@@ -111,8 +111,8 @@ public:
         const Terathon::Point3D position = origin + dir * tNearest;
 
         return RayHit{handle,
-                      Point3D{position.x, position.y, position.z},
-                      Vector3D{normalNearest.x, normalNearest.y, normalNearest.z},
+                      Vec3{position.x, position.y, position.z},
+                      Vec3{normalNearest.x, normalNearest.y, normalNearest.z},
                       tNearest};
     }
 
