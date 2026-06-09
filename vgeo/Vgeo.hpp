@@ -2,7 +2,8 @@
 
 #include "vgeo/CollisionResults.hpp"           // IWYU pragma: export
 #include "vgeo/CollisionSystem.hpp"            // IWYU pragma: export
-#include "vgeo/Handle.hpp"                     // IWYU pragma: export
+#include "vgeo/GeometryHandle.hpp"             // IWYU pragma: export
+#include "vgeo/InstanceHandle.hpp"             // IWYU pragma: export
 #include "vgeo/RayResult.hpp"                  // IWYU pragma: export
 #include "vgeo/Vec3.hpp"                       // IWYU pragma: export
 #include "vgeo/descriptors/AaBoxDesc.hpp"      // IWYU pragma: export

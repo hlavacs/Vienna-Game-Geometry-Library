@@ -51,7 +51,7 @@ public:
     }
 
     [[nodiscard]] std::optional<RayHit>
-    intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         const Terathon::Line3D   ray    = Terathon::Wedge(origin, dir);
         const Terathon::Dipole3D dipole = Terathon::Unitize(Terathon::Antiwedge(m_sphere, ray));
 
@@ -75,8 +75,7 @@ public:
         const Terathon::Point3D     position = origin + dir * tHit;
         const Terathon::Vector3D    normal   = Terathon::Normalize(position - sphereCenter);
 
-        return RayHit{
-            handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tHit};
+        return RayHit{handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tHit};
     }
 
 private:

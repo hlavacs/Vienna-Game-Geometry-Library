@@ -9,6 +9,6 @@
 
 namespace vgeo::internal::cpu {
 
-using ShapeVariant = std::variant<AaBox, Capsule, Sphere, ConvexHull>;
+using Shape = std::variant<AaBox, Capsule, Sphere, ConvexHull>;
 
 }

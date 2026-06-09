@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
 #include "vgeo/Vec3.hpp"
 
 #include <vector>
@@ -8,10 +8,10 @@
 namespace vgeo {
 
 struct RayHit {
-    Handle   shape;
-    Vec3  position;
-    Vec3  normal;
-    float    distance;
+    InstanceHandle shape;
+    Vec3           position;
+    Vec3           normal;
+    float          distance;
 };
 
 struct RayResult {

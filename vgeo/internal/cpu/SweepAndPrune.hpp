@@ -1,10 +1,10 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Shape.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BroadPhase.hpp"
-#include "vgeo/internal/cpu/ShapeVariant.hpp"
 
 #include <TSVector3D.h>
 
@@ -17,7 +17,7 @@ namespace vgeo::internal::cpu {
 
 class SweepAndPrune {
 public:
-    void add(Handle handle, ShapeVariant shape) {
+    void add(InstanceHandle handle, Shape shape) {
         Aabb aabb = std::visit([](const auto& shape) { return shape.template computeBv<Aabb>(); }, shape);
         m_aabbs.emplace(handle, aabb);
 
@@ -43,7 +43,7 @@ public:
         });
     }
 
-    void remove(Handle handle) {
+    void remove(InstanceHandle handle) {
         std::erase_if(m_axisX, [&handle](const Endpoint& endpoint) { return handle == endpoint.handle; });
         std::erase_if(m_axisY, [&handle](const Endpoint& endpoint) { return handle == endpoint.handle; });
         std::erase_if(m_axisZ, [&handle](const Endpoint& endpoint) { return handle == endpoint.handle; });
@@ -65,8 +65,8 @@ public:
         return result;
     }
 
-    std::vector<Handle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        std::vector<Handle> hits;
+    std::vector<InstanceHandle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        std::vector<InstanceHandle> hits;
 
         for (const auto& [handle, aabb] : m_aabbs) {
             if (aabb.intersectsRay(origin, dir)) {
@@ -81,23 +81,23 @@ private:
     enum class EndpointType { Min, Max };
 
     struct Endpoint {
-        Handle       handle;
-        float        value;
-        EndpointType type;
+        InstanceHandle handle;
+        float          value;
+        EndpointType   type;
     };
 
-    std::vector<Endpoint>            m_axisX;
-    std::vector<Endpoint>            m_axisY;
-    std::vector<Endpoint>            m_axisZ;
-    std::unordered_map<Handle, Aabb> m_aabbs;
+    std::vector<Endpoint>                    m_axisX;
+    std::vector<Endpoint>                    m_axisY;
+    std::vector<Endpoint>                    m_axisZ;
+    std::unordered_map<InstanceHandle, Aabb> m_aabbs;
 
     std::unordered_set<CandidatePair> collectPairs(const std::vector<Endpoint>& axis) const {
-        std::unordered_set<Handle>        open;
-        std::unordered_set<CandidatePair> pairs;
+        std::unordered_set<InstanceHandle> open;
+        std::unordered_set<CandidatePair>  pairs;
 
         for (const Endpoint& endpoint : axis) {
             if (endpoint.type == EndpointType::Min) {
-                for (const Handle& other : open) {
+                for (const InstanceHandle& other : open) {
                     pairs.emplace(other, endpoint.handle);
                 }
                 open.insert(endpoint.handle);

@@ -44,7 +44,7 @@ public:
     }
 
     [[nodiscard]] std::optional<RayHit>
-    intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         const Terathon::Vector3D axis    = m_b - m_a;
         const float              axisLen = Terathon::Magnitude(axis);
         const Terathon::Vector3D axisDir = Terathon::Normalize(axis);
@@ -92,8 +92,7 @@ public:
                 break;
         }
 
-        return RayHit{
-            handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tNearest};
+        return RayHit{handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tNearest};
     }
 
 private:

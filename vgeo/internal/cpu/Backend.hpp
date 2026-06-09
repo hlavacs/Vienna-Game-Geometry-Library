@@ -1,8 +1,11 @@
 #pragma once
 
 #include "vgeo/CollisionResults.hpp"
-#include "vgeo/Handle.hpp"
+#include "vgeo/GeometryHandle.hpp"
+#include "vgeo/InstanceHandle.hpp"
 #include "vgeo/RayResult.hpp"
+#include "vgeo/Shape.hpp"
+#include "vgeo/ShapeType.hpp"
 #include "vgeo/Vec3.hpp"
 #include "vgeo/descriptors/AaBoxDesc.hpp"
 #include "vgeo/descriptors/CapsuleDesc.hpp"
@@ -11,13 +14,10 @@
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 #include "vgeo/internal/cpu/BroadPhase.hpp"
+#include "vgeo/internal/cpu/InstancePool.hpp"
+#include "vgeo/internal/cpu/ShapeInstance.hpp"
 #include "vgeo/internal/cpu/ShapePool.hpp"
-#include "vgeo/internal/cpu/ShapeVariant.hpp"
 #include "vgeo/internal/cpu/narrowphase/NarrowPhase.hpp"
-#include "vgeo/internal/cpu/shapes/AaBox.hpp"
-#include "vgeo/internal/cpu/shapes/Capsule.hpp"
-#include "vgeo/internal/cpu/shapes/ConvexHull.hpp"
-#include "vgeo/internal/cpu/shapes/Sphere.hpp"
 #include "vgeo/internal/gpu/VulkanHandler.hpp"
 
 #include <cassert>
@@ -39,77 +39,80 @@ public:
 
     explicit Backend(VkPhysicalDevice_T* physicalDevice) : m_vulkanHandler(std::in_place, physicalDevice) {}
 
-    Handle add(const AaBoxDesc& desc) {
-        m_cachedResults.reset();
+    // Geometry
 
-        Handle h = m_aaBoxes.add(AaBox{desc.min, desc.max});
-        m_broadphase.add(h, ShapeVariant{m_aaBoxes[h]});
-        return h;
+    GeometryHandle defineAaBox(const AaBoxDesc& desc) {
+        return m_aaBoxes.add(AaBox{desc.min, desc.max});
     }
 
-    Handle add(const CapsuleDesc& desc) {
-        m_cachedResults.reset();
-
-        Handle h = m_capsules.add(Capsule{desc.a, desc.b, desc.radius});
-        m_broadphase.add(h, ShapeVariant{m_capsules[h]});
-        return h;
+    GeometryHandle defineCapsule(const CapsuleDesc& desc) {
+        return m_capsules.add(Capsule{desc.a, desc.b, desc.radius});
     }
 
-    Handle add(const ConvexHullDesc& desc) {
-        m_cachedResults.reset();
-
-        Handle h = m_convexHulls.add(ConvexHull{ConvexHullBuilder::build(desc.points)});
-        m_broadphase.add(h, ShapeVariant{m_convexHulls[h]});
-        return h;
+    GeometryHandle defineConvexHull(const ConvexHullDesc& desc) {
+        return m_convexHulls.add(ConvexHull{ConvexHullBuilder::build(desc.points)});
     }
 
-    Handle add(const SphereDesc& desc) {
-        m_cachedResults.reset();
-
-        Handle h = m_spheres.add(Sphere{desc.center, desc.radius});
-        m_broadphase.add(h, ShapeVariant{m_spheres[h]});
-        return h;
+    GeometryHandle defineSphere(const SphereDesc& desc) {
+        return m_spheres.add(Sphere{desc.center, desc.radius});
     }
 
-    void remove(Handle h) {
-        m_cachedResults.reset();
-
-        switch (h.getType()) {
+    void removeGeometry(GeometryHandle geometry) {
+        switch (geometry.getType()) {
             case ShapeType::AaBox:
-                m_aaBoxes.remove(h);
+                m_aaBoxes.remove(geometry);
                 break;
             case ShapeType::Capsule:
-                m_capsules.remove(h);
+                m_capsules.remove(geometry);
                 break;
             case ShapeType::ConvexHull:
-                m_convexHulls.remove(h);
+                m_convexHulls.remove(geometry);
                 break;
             case ShapeType::Sphere:
-                m_spheres.remove(h);
+                m_spheres.remove(geometry);
                 break;
             default:
-                assert(false && "unknown ShapeType in remove()");
+                assert(false && "unknown ShapeType in removeGeometry()");
                 break;
         }
-
-        m_broadphase.remove(h);
     }
 
-    bool isValid(Handle h) const {
-        switch (h.getType()) {
+    bool isValidGeometry(GeometryHandle geometry) const {
+        switch (geometry.getType()) {
             case ShapeType::AaBox:
-                return m_aaBoxes.isValid(h);
+                return m_aaBoxes.isValid(geometry);
             case ShapeType::Capsule:
-                return m_capsules.isValid(h);
+                return m_capsules.isValid(geometry);
             case ShapeType::ConvexHull:
-                return m_convexHulls.isValid(h);
+                return m_convexHulls.isValid(geometry);
             case ShapeType::Sphere:
-                return m_spheres.isValid(h);
+                return m_spheres.isValid(geometry);
             default:
-                assert(false && "unknown ShapeType in isValid()");
+                assert(false && "unknown ShapeType in isValidGeometry()");
                 return false;
         }
     }
+
+    // Instances
+
+    InstanceHandle add(GeometryHandle geometry) {
+        m_cachedResults.reset();
+        InstanceHandle h = m_instances.add(ShapeInstance{geometry});
+        m_broadphase.add(h, getShape(geometry));
+        return h;
+    }
+
+    void remove(InstanceHandle h) {
+        m_cachedResults.reset();
+        m_broadphase.remove(h);
+        m_instances.remove(h);
+    }
+
+    bool isValid(InstanceHandle h) const {
+        return m_instances.isValid(h);
+    }
+
+    // Queries
 
     CollisionResults queryAll() const {
         if (m_cachedResults.has_value()) {
@@ -120,17 +123,19 @@ public:
         std::vector<CandidatePair> candidates = m_broadphase.findCandidates();
 
         for (auto [handleA, handleB] : candidates) {
-            if (handleA.getType() > handleB.getType()) {
+            GeometryHandle geometryA = m_instances[handleA].geometry;
+            GeometryHandle geometryB = m_instances[handleB].geometry;
+
+            if (geometryA.getType() > geometryB.getType()) {
                 std::swap(handleA, handleB);
+                std::swap(geometryA, geometryB);
             }
 
-            ShapeVariant shapeA = getShape(handleA);
-            ShapeVariant shapeB = getShape(handleB);
+            Shape shapeA = getShape(geometryA);
+            Shape shapeB = getShape(geometryB);
 
             std::optional<CollisionPair> result = std::visit(
-                [&](const auto& shapeA, const auto& shapeB) { return collide(handleA, shapeA, handleB, shapeB); },
-                shapeA,
-                shapeB);
+                [&](const auto& a, const auto& b) { return collide(handleA, a, handleB, b); }, shapeA, shapeB);
 
             if (result) {
                 m_cachedResults->pairs.push_back(std::move(*result));
@@ -140,29 +145,27 @@ public:
         return m_cachedResults.value();
     }
 
-    std::optional<CollisionPair> queryPair(Handle handleA, Handle handleB) const {
-        ShapeVariant shapeA = getShape(handleA);
-        ShapeVariant shapeB = getShape(handleB);
+    std::optional<CollisionPair> queryPair(InstanceHandle handleA, InstanceHandle handleB) const {
+        Shape shapeA = getShape(m_instances[handleA].geometry);
+        Shape shapeB = getShape(m_instances[handleB].geometry);
 
         return std::visit(
-            [&](const auto& shapeA, const auto& shapeB) { return collide(handleA, shapeA, handleB, shapeB); },
-            shapeA,
-            shapeB);
+            [&](const auto& a, const auto& b) { return collide(handleA, a, handleB, b); }, shapeA, shapeB);
     }
 
-    bool overlaps(Handle handleA, Handle handleB) const {
+    bool overlaps(InstanceHandle handleA, InstanceHandle handleB) const {
         return queryPair(handleA, handleB).has_value();
     }
 
     RayResult castRay(Vec3 origin, Vec3 dir) const {
-        const Terathon::Point3D   terathonOrigin{origin.x, origin.y, origin.z};
-        const Terathon::Vector3D  terathonDir{dir.x, dir.y, dir.z};
-        const std::vector<Handle> candidates = m_broadphase.castRay(terathonOrigin, terathonDir);
+        const Terathon::Point3D           terathonOrigin{origin.x, origin.y, origin.z};
+        const Terathon::Vector3D          terathonDir{dir.x, dir.y, dir.z};
+        const std::vector<InstanceHandle> candidates = m_broadphase.castRay(terathonOrigin, terathonDir);
 
         RayResult result;
 
-        for (const Handle& handle : candidates) {
-            ShapeVariant          shape = getShape(handle);
+        for (const InstanceHandle& handle : candidates) {
+            Shape                 shape = getShape(m_instances[handle].geometry);
             std::optional<RayHit> hit =
                 std::visit([&](const auto& s) { return s.intersectRay(handle, terathonOrigin, terathonDir); }, shape);
 
@@ -176,16 +179,16 @@ public:
     }
 
 private:
-    ShapeVariant getShape(Handle h) const {
-        switch (h.getType()) {
+    Shape getShape(GeometryHandle geometry) const {
+        switch (geometry.getType()) {
             case ShapeType::AaBox:
-                return m_aaBoxes[h];
+                return m_aaBoxes[geometry];
             case ShapeType::Capsule:
-                return m_capsules[h];
-            case ShapeType::Sphere:
-                return m_spheres[h];
+                return m_capsules[geometry];
             case ShapeType::ConvexHull:
-                return m_convexHulls[h];
+                return m_convexHulls[geometry];
+            case ShapeType::Sphere:
+                return m_spheres[geometry];
             default:
                 assert(false && "unknown ShapeType in getShape()");
                 return AaBox{};
@@ -197,6 +200,7 @@ private:
     ShapePool<ConvexHull, ShapeType::ConvexHull> m_convexHulls;
     ShapePool<Sphere, ShapeType::Sphere>         m_spheres;
 
+    InstancePool<ShapeInstance>                       m_instances;
     std::optional<vgeo::internal::gpu::VulkanHandler> m_vulkanHandler;
     Bp                                                m_broadphase;
     mutable std::optional<CollisionResults>           m_cachedResults;

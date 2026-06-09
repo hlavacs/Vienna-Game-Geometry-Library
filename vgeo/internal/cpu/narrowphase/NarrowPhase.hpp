@@ -3,7 +3,7 @@
 #include "TSRigid3D.h"
 #include "TSVector3D.h"
 #include "vgeo/CollisionResults.hpp"
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
 #include "vgeo/internal/cpu/narrowphase/Epa.hpp"
 #include "vgeo/internal/cpu/narrowphase/Gjk.hpp"
 #include "vgeo/internal/cpu/shapes/Capsule.hpp"
@@ -17,7 +17,8 @@ namespace vgeo::internal::cpu {
 
 // GJK+EPA fallback for any convex pair
 template <typename ShapeA, typename ShapeB>
-std::optional<CollisionPair> collide(Handle handleA, const ShapeA& shapeA, Handle handleB, const ShapeB& shapeB) {
+std::optional<CollisionPair>
+collide(InstanceHandle handleA, const ShapeA& shapeA, InstanceHandle handleB, const ShapeB& shapeB) {
     Simplex simplex;
 
     if (!gjk(shapeA, shapeB, simplex)) {
@@ -33,7 +34,7 @@ std::optional<CollisionPair> collide(Handle handleA, const ShapeA& shapeA, Handl
 }
 
 inline std::optional<CollisionPair>
-collide(Handle handleA, const Capsule& capsuleA, Handle handleB, const Capsule& capsuleB) {
+collide(InstanceHandle handleA, const Capsule& capsuleA, InstanceHandle handleB, const Capsule& capsuleB) {
     const Terathon::Point3D  a1     = capsuleA.getA();
     const Terathon::Point3D  a2     = capsuleA.getB();
     const Terathon::Point3D  b1     = capsuleB.getA();
@@ -106,7 +107,7 @@ collide(Handle handleA, const Capsule& capsuleA, Handle handleB, const Capsule& 
 }
 
 inline std::optional<CollisionPair>
-collide(Handle handleA, const Capsule& capsule, Handle handleB, const Sphere& sphere) {
+collide(InstanceHandle handleA, const Capsule& capsule, InstanceHandle handleB, const Sphere& sphere) {
     const Terathon::Sphere3D    s          = Terathon::Unitize(sphere.getSphere());
     const Terathon::FlatPoint3D flatCenter = Terathon::FlatCenter(s);
     const Terathon::Point3D     center{flatCenter.x, flatCenter.y, flatCenter.z};
@@ -143,7 +144,7 @@ collide(Handle handleA, const Capsule& capsule, Handle handleB, const Sphere& sp
 }
 
 inline std::optional<CollisionPair>
-collide(Handle handleA, const Sphere& sphereA, Handle handleB, const Sphere& sphereB) {
+collide(InstanceHandle handleA, const Sphere& sphereA, InstanceHandle handleB, const Sphere& sphereB) {
     const Terathon::Sphere3D s1                 = Terathon::Unitize(sphereA.getSphere());
     const Terathon::Sphere3D s2                 = Terathon::Unitize(sphereB.getSphere());
     const Terathon::Circle3D intersectionCircle = Terathon::Antiwedge(s1, s2);

@@ -61,7 +61,7 @@ public:
     }
 
     [[nodiscard]] std::optional<RayHit>
-    intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         float              tNearest = FLT_MAX;
         Terathon::Vector3D normalNearest;
 

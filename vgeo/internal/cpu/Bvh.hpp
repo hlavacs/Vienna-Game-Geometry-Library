@@ -1,11 +1,11 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Shape.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/BroadPhase.hpp"
-#include "vgeo/internal/cpu/ShapeVariant.hpp"
 
 #include <TSVector3D.h>
 
@@ -22,14 +22,14 @@ class Bvh {
 public:
     using BoundingVolumeType = Bv;
 
-    void add(Handle handle, ShapeVariant shape) {
+    void add(InstanceHandle handle, Shape shape) {
         Bv bv = std::visit([](const auto& shape) { return shape.template computeBv<Bv>(); }, shape);
         m_shapeEntries.emplace_back(handle, bv);
         m_indices.push_back(static_cast<uint32_t>(m_indices.size()));
         m_isDirty = true;
     }
 
-    void remove(Handle handle) {
+    void remove(InstanceHandle handle) {
         auto it = std::find_if(m_shapeEntries.begin(), m_shapeEntries.end(), [handle](const ShapeEntry& entry) {
             return handle == entry.handle;
         });
@@ -55,12 +55,12 @@ public:
         return pairs;
     }
 
-    std::vector<Handle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    std::vector<InstanceHandle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
         if (m_isDirty) {
             rebuild();
         }
 
-        std::vector<Handle> hits;
+        std::vector<InstanceHandle> hits;
         if (!m_nodes.empty()) {
             collectHits(0, origin, dir, hits);
         }
@@ -71,8 +71,8 @@ private:
     static constexpr uint32_t Invalid = std::numeric_limits<uint32_t>::max();
 
     struct ShapeEntry {
-        Handle handle;
-        Bv     bv;
+        InstanceHandle handle;
+        Bv             bv;
     };
 
     struct Node {
@@ -199,8 +199,10 @@ private:
         }
     }
 
-    void
-    collectHits(uint32_t nodeIndex, Terathon::Point3D origin, Terathon::Vector3D dir, std::vector<Handle>& hits) const {
+    void collectHits(uint32_t                     nodeIndex,
+                     Terathon::Point3D            origin,
+                     Terathon::Vector3D           dir,
+                     std::vector<InstanceHandle>& hits) const {
         const Node& node = m_nodes[nodeIndex];
 
         if (!node.bv.intersectsRay(origin, dir)) {

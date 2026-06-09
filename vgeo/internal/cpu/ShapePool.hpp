@@ -1,8 +1,8 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/GeometryHandle.hpp"
 #include "vgeo/ShapeType.hpp"
-#include "vgeo/internal/HandleRegistry.hpp"
+#include "vgeo/internal/GeometryRegistry.hpp"
 
 #include <vector>
 
@@ -10,31 +10,31 @@ namespace vgeo::internal::cpu {
 
 template <typename Shape, ShapeType Type>
 struct ShapePool {
-    Handle add(Shape shape) {
-        Handle   h     = registry.allocate();
-        uint32_t index = h.getIndex();
+    GeometryHandle add(Shape shape) {
+        GeometryHandle handle = registry.allocate();
+        uint32_t       index  = handle.getIndex();
         if (index >= shapes.size()) {
             shapes.resize(index + 1);
         }
         shapes[index] = std::move(shape);
-        return h;
+        return handle;
     }
 
-    void remove(Handle h) {
-        registry.free(h);
-        shapes[h.getIndex()] = Shape{};
+    void remove(GeometryHandle handle) {
+        registry.free(handle);
+        shapes[handle.getIndex()] = Shape{};
     }
 
-    bool isValid(Handle h) const {
-        return registry.isValid(h);
+    bool isValid(GeometryHandle handle) const {
+        return registry.isValid(handle);
     }
 
-    const Shape& operator[](Handle h) const {
-        return shapes[h.getIndex()];
+    const Shape& operator[](GeometryHandle handle) const {
+        return shapes[handle.getIndex()];
     }
 
-    HandleRegistry<Type> registry;
-    std::vector<Shape>   shapes;
+    internal::GeometryRegistry<Type> registry;
+    std::vector<Shape>               shapes;
 };
 
 } // namespace vgeo::internal::cpu

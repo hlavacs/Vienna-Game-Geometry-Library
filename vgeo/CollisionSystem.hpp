@@ -1,7 +1,8 @@
 #pragma once
 
 #include "vgeo/CollisionResults.hpp"
-#include "vgeo/Handle.hpp"
+#include "vgeo/GeometryHandle.hpp"
+#include "vgeo/InstanceHandle.hpp"
 #include "vgeo/RayResult.hpp"
 #include "vgeo/Vec3.hpp"
 #include "vgeo/descriptors/AaBoxDesc.hpp"
@@ -27,39 +28,57 @@ public:
 
     explicit CollisionSystem(VkPhysicalDevice_T* physicalDevice) : m_backend(physicalDevice) {}
 
-    Handle addAaBox(const AaBoxDesc& aaBox) {
-        return m_backend.add(aaBox);
+    // Geometry
+
+    GeometryHandle defineAaBox(const AaBoxDesc& desc) {
+        return m_backend.defineAaBox(desc);
     }
 
-    Handle addCapsule(const CapsuleDesc& capsule) {
-        return m_backend.add(capsule);
+    GeometryHandle defineCapsule(const CapsuleDesc& desc) {
+        return m_backend.defineCapsule(desc);
     }
 
-    Handle addConvexHull(const ConvexHullDesc& convexHull) {
-        return m_backend.add(convexHull);
+    GeometryHandle defineConvexHull(const ConvexHullDesc& desc) {
+        return m_backend.defineConvexHull(desc);
     }
 
-    Handle addSphere(const SphereDesc& sphere) {
-        return m_backend.add(sphere);
+    GeometryHandle defineSphere(const SphereDesc& desc) {
+        return m_backend.defineSphere(desc);
     }
 
-    void remove(Handle handle) {
+    void removeGeometry(GeometryHandle geometry) {
+        m_backend.removeGeometry(geometry);
+    }
+
+    bool isValidGeometry(GeometryHandle geometry) const {
+        return m_backend.isValidGeometry(geometry);
+    }
+
+    // Instances
+
+    InstanceHandle add(GeometryHandle geometry) {
+        return m_backend.add(geometry);
+    }
+
+    void remove(InstanceHandle handle) {
         m_backend.remove(handle);
     }
 
-    bool isValid(Handle handle) const {
+    bool isValid(InstanceHandle handle) const {
         return m_backend.isValid(handle);
     }
+
+    // Queries
 
     CollisionResults queryAll() const {
         return m_backend.queryAll();
     }
 
-    std::optional<CollisionPair> queryPair(Handle shapeA, Handle shapeB) const {
+    std::optional<CollisionPair> queryPair(InstanceHandle shapeA, InstanceHandle shapeB) const {
         return m_backend.queryPair(shapeA, shapeB);
     }
 
-    bool queryOverlap(Handle shapeA, Handle shapeB) const {
+    bool queryOverlap(InstanceHandle shapeA, InstanceHandle shapeB) const {
         return m_backend.overlaps(shapeA, shapeB);
     }
 

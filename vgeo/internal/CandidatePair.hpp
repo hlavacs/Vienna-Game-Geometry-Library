@@ -1,12 +1,12 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
 
 namespace vgeo::internal {
 
 struct CandidatePair {
-    Handle a;
-    Handle b;
+    InstanceHandle a;
+    InstanceHandle b;
 
     bool operator==(const CandidatePair& other) const noexcept {
         return (a == other.a && b == other.b) || (a == other.b && b == other.a);

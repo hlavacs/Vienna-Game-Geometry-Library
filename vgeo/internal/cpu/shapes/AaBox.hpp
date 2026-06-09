@@ -40,7 +40,7 @@ public:
     }
 
     [[nodiscard]] std::optional<RayHit>
-    intersectRay(Handle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+    intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
         float tEntry  = 0.0f;
         float tExit   = FLT_MAX;
         int   hitAxis = 0;
@@ -95,8 +95,7 @@ public:
                 break;
         }
 
-        return RayHit{
-            handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tEntry};
+        return RayHit{handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tEntry};
     }
 
 private:

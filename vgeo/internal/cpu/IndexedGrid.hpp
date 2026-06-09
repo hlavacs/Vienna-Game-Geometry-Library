@@ -1,11 +1,11 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Shape.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BroadPhase.hpp"
 #include "vgeo/internal/cpu/Cell.hpp"
-#include "vgeo/internal/cpu/ShapeVariant.hpp"
 
 #include <TSVector3D.h>
 
@@ -23,7 +23,7 @@ class IndexedGrid {
 public:
     IndexedGrid(const float cellSize) : m_cellSize{cellSize}, m_boundsMin{INT_MAX}, m_boundsMax{INT_MIN} {}
 
-    void add(Handle handle, ShapeVariant shape) {
+    void add(InstanceHandle handle, Shape shape) {
         const Aabb aabb = std::visit([](const auto& shape) { return shape.template computeBv<Aabb>(); }, shape);
 
         const int cellMinX = static_cast<int>(std::floor(aabb.getMin().x / m_cellSize));
@@ -50,7 +50,7 @@ public:
         }
     }
 
-    void remove(Handle handle) {
+    void remove(InstanceHandle handle) {
         const std::vector<Cell> occupied = m_handleCells.at(handle);
         m_handleCells.erase(handle);
 
@@ -81,9 +81,9 @@ public:
         return std::vector<CandidatePair>(pairs.begin(), pairs.end());
     }
 
-    std::vector<Handle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        std::vector<Handle>        hits;
-        std::unordered_set<Handle> seen;
+    std::vector<InstanceHandle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        std::vector<InstanceHandle>        hits;
+        std::unordered_set<InstanceHandle> seen;
         if (m_grid.empty()) {
             return hits;
         }
@@ -164,7 +164,7 @@ public:
                currentY <= m_boundsMax.y && currentZ >= m_boundsMin.z && currentZ <= m_boundsMax.z) {
             // add handles of current cell
             if (m_grid.contains({currentX, currentY, currentZ})) {
-                for (const Handle& handle : m_grid.at({currentX, currentY, currentZ})) {
+                for (const InstanceHandle& handle : m_grid.at({currentX, currentY, currentZ})) {
                     if (!seen.contains(handle)) {
                         seen.insert(handle);
                         hits.push_back(handle);
@@ -193,15 +193,15 @@ private:
     Cell        m_boundsMin;
     Cell        m_boundsMax;
 
-    std::unordered_map<Cell, std::vector<Handle>> m_grid;        // which handles are in a cell
-    std::unordered_map<Handle, std::vector<Cell>> m_handleCells; // which cells does a handle occupy
+    std::unordered_map<Cell, std::vector<InstanceHandle>> m_grid;        // which handles are in a cell
+    std::unordered_map<InstanceHandle, std::vector<Cell>> m_handleCells; // which cells does a handle occupy
 
     void pairWithNeighbor(std::unordered_set<CandidatePair>& pairs,
                           const Cell&                        neighborCell,
-                          const std::vector<Handle>&         handles) const {
+                          const std::vector<InstanceHandle>& handles) const {
         if (m_grid.contains(neighborCell)) {
-            for (const Handle& handle : handles) {
-                for (const Handle& neighbor : m_grid.at(neighborCell)) {
+            for (const InstanceHandle& handle : handles) {
+                for (const InstanceHandle& neighbor : m_grid.at(neighborCell)) {
                     if (handle != neighbor) {
                         pairs.emplace(handle, neighbor);
                     }

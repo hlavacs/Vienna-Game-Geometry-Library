@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
 #include "vgeo/Vec3.hpp"
 
 #include <vector>
@@ -15,9 +15,9 @@ struct Contact {
 };
 
 struct CollisionPair {
-    Handle  shapeA;
-    Handle  shapeB;
-    Contact contact;
+    InstanceHandle shapeA;
+    InstanceHandle shapeB;
+    Contact        contact;
 };
 
 struct CollisionResults {

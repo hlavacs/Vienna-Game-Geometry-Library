@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/Handle.hpp"
+#include "vgeo/InstanceHandle.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
@@ -17,12 +17,12 @@ class BruteForce {
 public:
     using BoundingVolumeType = Bv;
 
-    void add(Handle handle, ShapeVariant shape) {
+    void add(InstanceHandle handle, Shape shape) {
         Bv bv = std::visit([](const auto& shape) { return shape.template computeBv<Bv>(); }, shape);
         m_shapeBvs.push_back({handle, bv});
     }
 
-    void remove(Handle handle) {
+    void remove(InstanceHandle handle) {
         std::erase_if(m_shapeBvs, [handle](const auto& shapeBv) { return shapeBv.first == handle; });
     }
 
@@ -38,8 +38,8 @@ public:
         return candidates;
     }
 
-    std::vector<Handle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        std::vector<Handle> hits;
+    std::vector<InstanceHandle> castRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        std::vector<InstanceHandle> hits;
         for (const auto& [handle, bv] : m_shapeBvs) {
             if (bv.intersectsRay(origin, dir)) {
                 hits.push_back(handle);
@@ -49,7 +49,7 @@ public:
     }
 
 private:
-    std::vector<std::pair<Handle, Bv>> m_shapeBvs;
+    std::vector<std::pair<InstanceHandle, Bv>> m_shapeBvs;
 };
 
 static_assert(BvBroadPhase<BruteForce<Aabb>>);

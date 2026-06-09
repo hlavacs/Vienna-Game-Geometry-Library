@@ -6,20 +6,22 @@
 #include <functional>
 
 namespace vgeo::internal {
+
 template <ShapeType>
-class HandleRegistry;
-}
+class GeometryRegistry;
+
+} // namespace vgeo::internal
 
 namespace vgeo {
 
-// Handle encodes three fields into a single uint64_t:
+// GeometryHandle encodes three fields into a single uint64_t:
 //
-// bits  0-31 : index       32b - max 4,294,967,296
-// bits 32-59 : generation  28b - max   268,435,456
-// bits 60-63 : type         4b - max            16
-class Handle {
+// bits  0-31 : index       (32b - max 4,294,967,296)
+// bits 32-59 : generation  (28b - max   268,435,456)
+// bits 60-63 : type         (4b - max            16)
+class GeometryHandle {
 public:
-    Handle() = delete;
+    GeometryHandle() = delete;
 
     uint32_t getIndex() const noexcept {
         return static_cast<uint32_t>(m_id & 0xFFFF'FFFFu);
@@ -37,13 +39,13 @@ public:
         return m_id;
     }
 
-    bool operator==(const Handle&) const noexcept = default;
+    bool operator==(const GeometryHandle&) const noexcept = default;
 
 private:
     template <ShapeType Type>
-    friend class internal::HandleRegistry;
+    friend class internal::GeometryRegistry;
 
-    explicit Handle(uint64_t id) noexcept : m_id(id) {}
+    explicit GeometryHandle(uint64_t id) noexcept : m_id(id) {}
 
     uint64_t m_id;
 };
@@ -53,9 +55,9 @@ private:
 namespace std {
 
 template <>
-struct hash<vgeo::Handle> {
-    size_t operator()(const vgeo::Handle& handle) const noexcept {
-        return hash<uint64_t>{}(handle.getId());
+struct hash<vgeo::GeometryHandle> {
+    size_t operator()(const vgeo::GeometryHandle& h) const noexcept {
+        return hash<uint64_t>{}(h.getId());
     }
 };
 
