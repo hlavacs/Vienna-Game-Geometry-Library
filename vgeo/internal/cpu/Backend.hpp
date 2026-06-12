@@ -3,6 +3,8 @@
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Mat4.hpp"
+#include "vgeo/Quat.hpp"
 #include "vgeo/RayResult.hpp"
 #include "vgeo/Shape.hpp"
 #include "vgeo/ShapeType.hpp"
@@ -15,6 +17,8 @@
 #include "vgeo/internal/cpu/ShapePool.hpp"
 #include "vgeo/internal/cpu/narrowphase/NarrowPhase.hpp"
 #include "vgeo/internal/gpu/VulkanHandler.hpp"
+
+#include <TSMatrix4D.h>
 
 #include <cassert>
 #include <optional>
@@ -92,11 +96,53 @@ public:
 
     // Instances
 
-    InstanceHandle add(GeometryHandle geometry) {
+    InstanceHandle add(GeometryHandle geometry, Vec3 position = {}) {
         m_cachedResults.reset();
-        InstanceHandle h = m_instances.add(ShapeInstance{geometry});
-        m_broadphase.add(h, getShape(geometry));
+        InstanceHandle h = m_instances.add(ShapeInstance{
+            geometry, Terathon::Motor3D::MakeTranslation(Terathon::Vector3D{position.x, position.y, position.z})});
+        m_broadphase.add(h, getWorldShape(h));
         return h;
+    }
+
+    void setPosition(InstanceHandle h, Vec3 position) {
+        m_cachedResults.reset();
+        const Terathon::Quaternion rotation = m_instances[h].motor.v;
+        m_instances[h].motor =
+            Terathon::Motor3D::MakeTranslation({position.x, position.y, position.z}) * Terathon::Motor3D{rotation};
+        m_broadphase.update(h, getWorldShape(h));
+    }
+
+    void setRotation(InstanceHandle h, vgeo::Quat rotation) {
+        m_cachedResults.reset();
+        const Terathon::Point3D position = m_instances[h].motor.GetPosition();
+        m_instances[h].motor = Terathon::Motor3D::MakeTranslation({position.x, position.y, position.z}) *
+                               Terathon::Motor3D{Terathon::Quaternion{rotation.x, rotation.y, rotation.z, rotation.w}};
+        m_broadphase.update(h, getWorldShape(h));
+    }
+
+    void setScale(InstanceHandle h, float scale) {
+        m_cachedResults.reset();
+        m_instances[h].scale = scale;
+        m_broadphase.update(h, getWorldShape(h));
+    }
+
+    // Column-major 4x4 matrix combining rotation, scale, and translation
+    vgeo::Mat4 getTransform(InstanceHandle h) const {
+        const Terathon::Motor3D&    motor     = m_instances[h].motor;
+        const float                 scale     = m_instances[h].scale;
+        const Terathon::Transform3D transform = motor.GetTransformMatrix();
+        vgeo::Mat4                  result{};
+        for (int col = 0; col < 3; ++col) {
+            for (int row = 0; row < 3; ++row) {
+                result.m[col][row] = transform(row, col) * scale;
+            }
+            result.m[col][3] = 0.0f;
+        }
+        result.m[3][0] = transform(0, 3);
+        result.m[3][1] = transform(1, 3);
+        result.m[3][2] = transform(2, 3);
+        result.m[3][3] = 1.0f;
+        return result;
     }
 
     void remove(InstanceHandle h) {
@@ -107,6 +153,20 @@ public:
 
     bool isValid(InstanceHandle h) const {
         return m_instances.isValid(h);
+    }
+
+    Vec3 getPosition(InstanceHandle h) const {
+        const Terathon::Point3D p = m_instances[h].motor.GetPosition();
+        return {p.x, p.y, p.z};
+    }
+
+    vgeo::Quat getRotation(InstanceHandle h) const {
+        const Terathon::Quaternion& q = m_instances[h].motor.v;
+        return {q.x, q.y, q.z, q.w};
+    }
+
+    float getScale(InstanceHandle h) const {
+        return m_instances[h].scale;
     }
 
     // Queries
@@ -128,8 +188,8 @@ public:
                 std::swap(geometryA, geometryB);
             }
 
-            Shape shapeA = getShape(geometryA);
-            Shape shapeB = getShape(geometryB);
+            Shape shapeA = getWorldShape(handleA);
+            Shape shapeB = getWorldShape(handleB);
 
             std::optional<CollisionPair> result = std::visit(
                 [&](const auto& a, const auto& b) { return collide(handleA, a, handleB, b); }, shapeA, shapeB);
@@ -143,8 +203,8 @@ public:
     }
 
     std::optional<CollisionPair> queryPair(InstanceHandle handleA, InstanceHandle handleB) const {
-        Shape shapeA = getShape(m_instances[handleA].geometry);
-        Shape shapeB = getShape(m_instances[handleB].geometry);
+        Shape shapeA = getWorldShape(handleA);
+        Shape shapeB = getWorldShape(handleB);
 
         return std::visit(
             [&](const auto& a, const auto& b) { return collide(handleA, a, handleB, b); }, shapeA, shapeB);
@@ -162,7 +222,7 @@ public:
         RayResult result;
 
         for (const InstanceHandle& handle : candidates) {
-            Shape                 shape = getShape(m_instances[handle].geometry);
+            Shape                 shape = getWorldShape(handle);
             std::optional<RayHit> hit =
                 std::visit([&](const auto& s) { return s.intersectRay(handle, terathonOrigin, terathonDir); }, shape);
 
@@ -176,7 +236,7 @@ public:
     }
 
 private:
-    Shape getShape(GeometryHandle geometry) const {
+    Shape getLocalShape(GeometryHandle geometry) const {
         switch (geometry.getType()) {
             case ShapeType::AaBox:
                 return m_aaBoxes[geometry];
@@ -187,9 +247,16 @@ private:
             case ShapeType::Sphere:
                 return m_spheres[geometry];
             default:
-                assert(false && "unknown ShapeType in getShape()");
+                assert(false && "unknown ShapeType in getLocalShape()");
                 return AaBox{};
         }
+    }
+
+    Shape getWorldShape(InstanceHandle h) const {
+        const ShapeInstance& instance = m_instances[h];
+        return std::visit(
+            [&](const auto& shape) -> Shape { return shape.applyTransform(instance.motor, instance.scale); },
+            getLocalShape(instance.geometry));
     }
 
     ShapePool<AaBox, ShapeType::AaBox>           m_aaBoxes;

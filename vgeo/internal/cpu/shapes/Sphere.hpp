@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TSMotor3D.h"
 #include "TSRigid3D.h"
 #include "vgeo/RayResult.hpp"
 #include "vgeo/Vec3.hpp"
@@ -37,6 +38,15 @@ public:
 
     [[nodiscard]] Terathon::Point3D centroid() const {
         return getCenter();
+    }
+
+    [[nodiscard]] Sphere applyTransform(const Terathon::Motor3D& motor, float scale) const {
+        const float             radius = getRadius() * scale;
+        const Terathon::Point3D center = motor.GetPosition();
+        Sphere                  result;
+        result.m_sphere = Terathon::Sphere3D{
+            -1.0f, center.x, center.y, center.z, -(Terathon::SquaredMag(center) - radius * radius) * 0.5f};
+        return result;
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {

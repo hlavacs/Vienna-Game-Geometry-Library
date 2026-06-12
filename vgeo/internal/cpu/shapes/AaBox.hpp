@@ -5,6 +5,7 @@
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
 
+#include <TSMotor3D.h>
 #include <TSVector3D.h>
 
 #include <cfloat>
@@ -17,8 +18,7 @@ public:
     AaBox() = default;
 
     explicit AaBox(Vec3 halfExtents)
-        : m_min{-halfExtents.x, -halfExtents.y, -halfExtents.z},
-          m_max{halfExtents.x, halfExtents.y, halfExtents.z} {}
+        : m_min{-halfExtents.x, -halfExtents.y, -halfExtents.z}, m_max{halfExtents.x, halfExtents.y, halfExtents.z} {}
 
     [[nodiscard]] Terathon::Point3D getMin() const {
         return m_min;
@@ -33,6 +33,15 @@ public:
 
     [[nodiscard]] Terathon::Point3D centroid() const {
         return {(m_min.x + m_max.x) * 0.5f, (m_min.y + m_max.y) * 0.5f, (m_min.z + m_max.z) * 0.5f};
+    }
+
+    // AaBox has no rotation to stay axis aligned, only translation and scale
+    [[nodiscard]] AaBox applyTransform(const Terathon::Motor3D& motor, float scale) const {
+        const Terathon::Point3D pos = motor.GetPosition();
+        AaBox                   result;
+        result.m_min = Terathon::Point3D(m_min.x * scale + pos.x, m_min.y * scale + pos.y, m_min.z * scale + pos.z);
+        result.m_max = Terathon::Point3D(m_max.x * scale + pos.x, m_max.y * scale + pos.y, m_max.z * scale + pos.z);
+        return result;
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {

@@ -29,6 +29,16 @@ public:
         m_isDirty = true;
     }
 
+    void update(InstanceHandle handle, Shape shape) {
+        Bv   bv = std::visit([](const auto& s) { return s.template computeBv<Bv>(); }, shape);
+        auto it = std::find_if(
+            m_shapeEntries.begin(), m_shapeEntries.end(), [handle](const ShapeEntry& e) { return e.handle == handle; });
+        if (it != m_shapeEntries.end()) {
+            it->bv    = bv;
+            m_isDirty = true;
+        }
+    }
+
     void remove(InstanceHandle handle) {
         auto it = std::find_if(m_shapeEntries.begin(), m_shapeEntries.end(), [handle](const ShapeEntry& entry) {
             return handle == entry.handle;

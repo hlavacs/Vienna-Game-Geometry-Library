@@ -4,6 +4,8 @@
 #include "vgeo/CollisionSystem.hpp"            // IWYU pragma: export
 #include "vgeo/GeometryHandle.hpp"             // IWYU pragma: export
 #include "vgeo/InstanceHandle.hpp"             // IWYU pragma: export
+#include "vgeo/Mat4.hpp"                       // IWYU pragma: export
+#include "vgeo/Quat.hpp"                       // IWYU pragma: export
 #include "vgeo/RayResult.hpp"                  // IWYU pragma: export
 #include "vgeo/Vec3.hpp"                       // IWYU pragma: export
 #include "vgeo/internal/cpu/Aabb.hpp"          // IWYU pragma: export

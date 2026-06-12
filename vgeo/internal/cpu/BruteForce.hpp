@@ -26,6 +26,15 @@ public:
         std::erase_if(m_shapeBvs, [handle](const auto& shapeBv) { return shapeBv.first == handle; });
     }
 
+    void update(InstanceHandle handle, Shape shape) {
+        Bv   bv = std::visit([](const auto& s) { return s.template computeBv<Bv>(); }, shape);
+        auto it =
+            std::find_if(m_shapeBvs.begin(), m_shapeBvs.end(), [handle](const auto& p) { return p.first == handle; });
+        if (it != m_shapeBvs.end()) {
+            it->second = bv;
+        }
+    }
+
     std::vector<CandidatePair> findCandidates() const {
         std::vector<CandidatePair> candidates;
         for (size_t i = 0; i < m_shapeBvs.size(); ++i) {

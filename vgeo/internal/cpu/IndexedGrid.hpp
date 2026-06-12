@@ -50,6 +50,11 @@ public:
         }
     }
 
+    void update(InstanceHandle handle, Shape shape) {
+        remove(handle);
+        add(handle, shape);
+    }
+
     void remove(InstanceHandle handle) {
         const std::vector<Cell> occupied = m_handleCells.at(handle);
         m_handleCells.erase(handle);

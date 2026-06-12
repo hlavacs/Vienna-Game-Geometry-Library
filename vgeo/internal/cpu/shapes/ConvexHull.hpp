@@ -6,6 +6,7 @@
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
 
+#include <TSMotor3D.h>
 #include <TSVector3D.h>
 
 #include <cfloat>
@@ -44,6 +45,14 @@ public:
         }
         float invCount = 1.0f / static_cast<float>(m_vertices.size());
         return {sum.x * invCount, sum.y * invCount, sum.z * invCount};
+    }
+
+    [[nodiscard]] ConvexHull applyTransform(const Terathon::Motor3D& motor, float scale) const {
+        ConvexHull result = *this;
+        for (auto& v : result.m_vertices) {
+            v = Terathon::Transform(Terathon::Point3D{v.x * scale, v.y * scale, v.z * scale}, motor);
+        }
+        return result;
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {

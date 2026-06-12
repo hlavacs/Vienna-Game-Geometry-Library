@@ -14,6 +14,7 @@ concept BroadPhase =
     requires(Bp bp, InstanceHandle handle, Shape shape, Terathon::Point3D origin, Terathon::Vector3D dir) {
         { bp.add(handle, shape) } -> std::same_as<void>;
         { bp.remove(handle) } -> std::same_as<void>;
+        { bp.update(handle, shape) } -> std::same_as<void>;
         { bp.findCandidates() } -> std::same_as<std::vector<CandidatePair>>;
         { bp.castRay(origin, dir) } -> std::same_as<std::vector<InstanceHandle>>;
     };

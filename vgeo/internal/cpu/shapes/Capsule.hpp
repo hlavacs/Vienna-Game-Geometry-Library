@@ -4,6 +4,7 @@
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
 
+#include <TSMotor3D.h>
 #include <TSVector3D.h>
 
 #include <algorithm>
@@ -36,6 +37,14 @@ public:
 
     [[nodiscard]] Terathon::Point3D centroid() const {
         return {(m_a.x + m_b.x) * 0.5f, (m_a.y + m_b.y) * 0.5f, (m_a.z + m_b.z) * 0.5f};
+    }
+
+    [[nodiscard]] Capsule applyTransform(const Terathon::Motor3D& motor, float scale) const {
+        Capsule result  = *this;
+        result.m_a      = Terathon::Transform(Terathon::Point3D{m_a.x * scale, m_a.y * scale, m_a.z * scale}, motor);
+        result.m_b      = Terathon::Transform(Terathon::Point3D{m_b.x * scale, m_b.y * scale, m_b.z * scale}, motor);
+        result.m_radius = m_radius * scale;
+        return result;
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {

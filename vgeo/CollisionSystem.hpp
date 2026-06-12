@@ -3,6 +3,8 @@
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Mat4.hpp"
+#include "vgeo/Quat.hpp"
 #include "vgeo/RayResult.hpp"
 #include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Backend.hpp"
@@ -53,8 +55,37 @@ public:
 
     // Instances
 
-    InstanceHandle add(GeometryHandle geometry) {
-        return m_backend.add(geometry);
+    InstanceHandle add(GeometryHandle geometry, Vec3 position = {}) {
+        return m_backend.add(geometry, position);
+    }
+
+    void setPosition(InstanceHandle handle, Vec3 position) {
+        m_backend.setPosition(handle, position);
+    }
+
+    void setRotation(InstanceHandle handle, Quat rotation) {
+        m_backend.setRotation(handle, rotation);
+    }
+
+    void setScale(InstanceHandle handle, float scale) {
+        m_backend.setScale(handle, scale);
+    }
+
+    Vec3 getPosition(InstanceHandle handle) const {
+        return m_backend.getPosition(handle);
+    }
+
+    Quat getRotation(InstanceHandle handle) const {
+        return m_backend.getRotation(handle);
+    }
+
+    float getScale(InstanceHandle handle) const {
+        return m_backend.getScale(handle);
+    }
+
+    // Returns olumn-major 4x4 matrix combining rotation, scale, and translation.
+    Mat4 getTransform(InstanceHandle handle) const {
+        return m_backend.getTransform(handle);
     }
 
     void remove(InstanceHandle handle) {

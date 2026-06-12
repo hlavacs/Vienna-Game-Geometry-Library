@@ -29,6 +29,10 @@ struct InstancePool {
         return registry.isValid(handle);
     }
 
+    T& operator[](InstanceHandle handle) {
+        return *instances[handle.getIndex()];
+    }
+
     const T& operator[](InstanceHandle handle) const {
         return *instances[handle.getIndex()];
     }

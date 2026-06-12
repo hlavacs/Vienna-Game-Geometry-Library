@@ -3,10 +3,7 @@
 #include "vgeo/CollisionResults.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/RayResult.hpp"
-#include "vgeo/descriptors/AaBoxDesc.hpp"
-#include "vgeo/descriptors/CapsuleDesc.hpp"
-#include "vgeo/descriptors/ConvexHullDesc.hpp"
-#include "vgeo/descriptors/SphereDesc.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
 #include "vgeo/internal/GeometryRegistry.hpp"
 #include "vgeo/internal/gpu/VulkanHandler.hpp"
@@ -46,7 +43,7 @@ public:
     GpuBackend(VkPhysicalDevice& physicalDevice);
     void queryBoxes();
 
-    GeometryHandle define(const AaBoxDesc& desc);
+    GeometryHandle defineAaBox(Vec3 halfExtents);
     /*
     GeometryHandle define(const CapsuleDesc& desc) {
         return addShape(m_capsuleRegistry, m_capsules, Capsule{desc.a, desc.b, desc.radius});
@@ -124,10 +121,11 @@ void GpuBackend<Bv>::queryBoxes() {
 }
 
 template <typename Bv>
-GeometryHandle GpuBackend<Bv>::define(const AaBoxDesc& desc) {
-    return addShape(m_aaBoxRegistry,
-                    m_aaBoxes,
-                    AaBox{desc.min.x, desc.min.y, desc.min.z, 0.0, desc.max.x, desc.max.y, desc.max.z, 0.0});
+GeometryHandle GpuBackend<Bv>::defineAaBox(Vec3 halfExtents) {
+    return addShape(
+        m_aaBoxRegistry,
+        m_aaBoxes,
+        AaBox{-halfExtents.x, -halfExtents.y, -halfExtents.z, 0.0f, halfExtents.x, halfExtents.y, halfExtents.z, 0.0f});
 }
 
 }

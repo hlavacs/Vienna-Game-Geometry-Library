@@ -43,6 +43,11 @@ public:
         });
     }
 
+    void update(InstanceHandle handle, Shape shape) {
+        remove(handle);
+        add(handle, shape);
+    }
+
     void remove(InstanceHandle handle) {
         std::erase_if(m_axisX, [&handle](const Endpoint& endpoint) { return handle == endpoint.handle; });
         std::erase_if(m_axisY, [&handle](const Endpoint& endpoint) { return handle == endpoint.handle; });
