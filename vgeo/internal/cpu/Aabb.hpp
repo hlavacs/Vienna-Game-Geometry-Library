@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BoundingVolume.hpp"
+#include "vgeo/Real.hpp"
 
 #include <TSVector3D.h>
 
@@ -40,23 +41,23 @@ public:
     }
 
     [[nodiscard]] bool intersectsRay(Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        float       t1    = (m_min.x - origin.x) / dir.x;
-        float       t2    = (m_max.x - origin.x) / dir.x;
-        const float tMinX = std::min(t1, t2);
-        const float tMaxX = std::max(t1, t2);
+        real       t1    = (m_min.x - origin.x) / dir.x;
+        real       t2    = (m_max.x - origin.x) / dir.x;
+        const real tMinX = std::min(t1, t2);
+        const real tMaxX = std::max(t1, t2);
 
-        t1                = (m_min.y - origin.y) / dir.y;
-        t2                = (m_max.y - origin.y) / dir.y;
-        const float tMinY = std::min(t1, t2);
-        const float tMaxY = std::max(t1, t2);
+        t1               = (m_min.y - origin.y) / dir.y;
+        t2               = (m_max.y - origin.y) / dir.y;
+        const real tMinY = std::min(t1, t2);
+        const real tMaxY = std::max(t1, t2);
 
-        t1                = (m_min.z - origin.z) / dir.z;
-        t2                = (m_max.z - origin.z) / dir.z;
-        const float tMinZ = std::min(t1, t2);
-        const float tMaxZ = std::max(t1, t2);
+        t1               = (m_min.z - origin.z) / dir.z;
+        t2               = (m_max.z - origin.z) / dir.z;
+        const real tMinZ = std::min(t1, t2);
+        const real tMaxZ = std::max(t1, t2);
 
-        const float entry = std::max({tMinX, tMinY, tMinZ});
-        const float exit  = std::min({tMaxX, tMaxY, tMaxZ});
+        const real entry = std::max({tMinX, tMinY, tMinZ});
+        const real exit  = std::min({tMaxX, tMaxY, tMaxZ});
 
         return entry <= exit && exit >= 0;
     }

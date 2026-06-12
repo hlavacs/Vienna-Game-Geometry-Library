@@ -3,6 +3,7 @@
 #include "TSMotor3D.h"
 #include "TSRigid3D.h"
 #include "vgeo/RayResult.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
@@ -19,7 +20,7 @@ class Sphere {
 public:
     Sphere() = default;
 
-    explicit Sphere(float radius) : m_sphere{-1.0f, 0.0f, 0.0f, 0.0f, radius * radius * 0.5f} {}
+    explicit Sphere(real radius) : m_sphere{-1.0f, 0.0f, 0.0f, 0.0f, radius * radius * 0.5f} {}
 
     [[nodiscard]] Terathon::Sphere3D getSphere() const {
         return m_sphere;
@@ -29,7 +30,7 @@ public:
         return {m_sphere.x, m_sphere.y, m_sphere.z};
     }
 
-    [[nodiscard]] float getRadius() const {
+    [[nodiscard]] real getRadius() const {
         return std::sqrt(Terathon::SquaredRadiusNorm(m_sphere));
     }
 
@@ -40,8 +41,8 @@ public:
         return getCenter();
     }
 
-    [[nodiscard]] Sphere applyTransform(const Terathon::Motor3D& motor, float scale) const {
-        const float             radius = getRadius() * scale;
+    [[nodiscard]] Sphere applyTransform(const Terathon::Motor3D& motor, real scale) const {
+        const real              radius = getRadius() * scale;
         const Terathon::Point3D center = motor.GetPosition();
         Sphere                  result;
         result.m_sphere = Terathon::Sphere3D{
@@ -50,8 +51,8 @@ public:
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
-        dir                = Terathon::Normalize(dir);
-        const float radius = getRadius();
+        dir               = Terathon::Normalize(dir);
+        const real radius = getRadius();
         return {m_sphere.x + radius * dir.x, m_sphere.y + radius * dir.y, m_sphere.z + radius * dir.z};
     }
 
@@ -66,10 +67,10 @@ public:
 
         const Terathon::FlatPoint3D dipoleFlatCenter = Terathon::FlatCenter(dipole);
         const Terathon::Point3D     dipoleCenter{dipoleFlatCenter.x, dipoleFlatCenter.y, dipoleFlatCenter.z};
-        const float                 radius = std::sqrt(Terathon::SquaredRadiusNorm(dipole));
+        const real                  radius = std::sqrt(Terathon::SquaredRadiusNorm(dipole));
 
-        const float tCenter = Terathon::Dot(dipoleCenter - origin, dir);
-        const float tHit    = tCenter - radius;
+        const real tCenter = Terathon::Dot(dipoleCenter - origin, dir);
+        const real tHit    = tCenter - radius;
 
         if (tHit < 0.0f) {
             return std::nullopt;
@@ -89,7 +90,7 @@ private:
 
 template <>
 [[nodiscard]] inline Aabb Sphere::computeBv<Aabb>() const {
-    const float radius = getRadius();
+    const real radius = getRadius();
     return {
         {m_sphere.x - radius, m_sphere.y - radius, m_sphere.z - radius},
         {m_sphere.x + radius, m_sphere.y + radius, m_sphere.z + radius},

@@ -6,6 +6,7 @@
 #include "vgeo/Mat4.hpp"
 #include "vgeo/Quat.hpp"
 #include "vgeo/RayResult.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Backend.hpp"
 #include "vgeo/internal/cpu/Bvh.hpp"
@@ -33,7 +34,7 @@ public:
         return m_backend.defineAaBox(halfExtents);
     }
 
-    GeometryHandle defineCapsule(float halfLength, float radius) {
+    GeometryHandle defineCapsule(real halfLength, real radius) {
         return m_backend.defineCapsule(halfLength, radius);
     }
 
@@ -41,7 +42,7 @@ public:
         return m_backend.defineConvexHull(points);
     }
 
-    GeometryHandle defineSphere(float radius) {
+    GeometryHandle defineSphere(real radius) {
         return m_backend.defineSphere(radius);
     }
 
@@ -67,7 +68,7 @@ public:
         m_backend.setRotation(handle, rotation);
     }
 
-    void setScale(InstanceHandle handle, float scale) {
+    void setScale(InstanceHandle handle, real scale) {
         m_backend.setScale(handle, scale);
     }
 
@@ -79,7 +80,7 @@ public:
         return m_backend.getRotation(handle);
     }
 
-    float getScale(InstanceHandle handle) const {
+    real getScale(InstanceHandle handle) const {
         return m_backend.getScale(handle);
     }
 

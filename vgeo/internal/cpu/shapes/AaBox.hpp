@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vgeo/Real.hpp"
 #include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
@@ -8,7 +9,6 @@
 #include <TSMotor3D.h>
 #include <TSVector3D.h>
 
-#include <cfloat>
 #include <optional>
 
 namespace vgeo::internal::cpu {
@@ -36,7 +36,7 @@ public:
     }
 
     // AaBox has no rotation to stay axis aligned, only translation and scale
-    [[nodiscard]] AaBox applyTransform(const Terathon::Motor3D& motor, float scale) const {
+    [[nodiscard]] AaBox applyTransform(const Terathon::Motor3D& motor, real scale) const {
         const Terathon::Point3D pos = motor.GetPosition();
         AaBox                   result;
         result.m_min = Terathon::Point3D(m_min.x * scale + pos.x, m_min.y * scale + pos.y, m_min.z * scale + pos.z);
@@ -52,15 +52,15 @@ public:
 
     [[nodiscard]] std::optional<RayHit>
     intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        float tEntry  = 0.0f;
-        float tExit   = FLT_MAX;
-        int   hitAxis = 0;
+        real tEntry  = 0.0f;
+        real tExit   = std::numeric_limits<real>::max();
+        int  hitAxis = 0;
 
         for (int axis = 0; axis < 3; ++axis) {
-            const float originAxis = axis == 0 ? origin.x : axis == 1 ? origin.y : origin.z;
-            const float dirAxis    = axis == 0 ? dir.x : axis == 1 ? dir.y : dir.z;
-            const float slabMin    = axis == 0 ? m_min.x : axis == 1 ? m_min.y : m_min.z;
-            const float slabMax    = axis == 0 ? m_max.x : axis == 1 ? m_max.y : m_max.z;
+            const real originAxis = axis == 0 ? origin.x : axis == 1 ? origin.y : origin.z;
+            const real dirAxis    = axis == 0 ? dir.x : axis == 1 ? dir.y : dir.z;
+            const real slabMin    = axis == 0 ? m_min.x : axis == 1 ? m_min.y : m_min.z;
+            const real slabMax    = axis == 0 ? m_max.x : axis == 1 ? m_max.y : m_max.z;
 
             if (std::abs(dirAxis) < 1e-6f) {
                 if (originAxis < slabMin || originAxis > slabMax) {
@@ -69,8 +69,8 @@ public:
                 continue;
             }
 
-            float t0 = (slabMin - originAxis) / dirAxis;
-            float t1 = (slabMax - originAxis) / dirAxis;
+            real t0 = (slabMin - originAxis) / dirAxis;
+            real t1 = (slabMax - originAxis) / dirAxis;
 
             if (t0 > t1) {
                 std::swap(t0, t1);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vgeo/Real.hpp"
 #include "vgeo/Vec3.hpp"
 #include "vgeo/internal/ConvexHullData.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
@@ -9,7 +10,6 @@
 #include <TSMotor3D.h>
 #include <TSVector3D.h>
 
-#include <cfloat>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -43,11 +43,11 @@ public:
         for (const Terathon::Point3D& vertex : m_vertices) {
             sum += vertex;
         }
-        float invCount = 1.0f / static_cast<float>(m_vertices.size());
+        real invCount = 1.0f / static_cast<real>(m_vertices.size());
         return {sum.x * invCount, sum.y * invCount, sum.z * invCount};
     }
 
-    [[nodiscard]] ConvexHull applyTransform(const Terathon::Motor3D& motor, float scale) const {
+    [[nodiscard]] ConvexHull applyTransform(const Terathon::Motor3D& motor, real scale) const {
         ConvexHull result = *this;
         for (auto& v : result.m_vertices) {
             v = Terathon::Transform(Terathon::Point3D{v.x * scale, v.y * scale, v.z * scale}, motor);
@@ -58,9 +58,9 @@ public:
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
         dir                        = Terathon::Normalize(dir);
         Terathon::Point3D furthest = m_vertices[0];
-        float             maxDot   = Terathon::Dot(dir, furthest);
+        real              maxDot   = Terathon::Dot(dir, furthest);
         for (const Terathon::Point3D& vertex : m_vertices) {
-            float dot = Terathon::Dot(dir, vertex);
+            real dot = Terathon::Dot(dir, vertex);
             if (dot > maxDot) {
                 maxDot   = dot;
                 furthest = vertex;
@@ -71,7 +71,7 @@ public:
 
     [[nodiscard]] std::optional<RayHit>
     intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        float              tNearest = FLT_MAX;
+        real               tNearest = std::numeric_limits<real>::max();
         Terathon::Vector3D normalNearest;
 
         for (size_t i = 0; i < m_indices.size(); i += 3) {
@@ -82,28 +82,28 @@ public:
             const Terathon::Vector3D e1          = v1 - v0;
             const Terathon::Vector3D e2          = v2 - v0;
             const Terathon::Vector3D h           = Terathon::Cross(dir, e2);
-            const float              determinant = Terathon::Dot(e1, h);
+            const real               determinant = Terathon::Dot(e1, h);
 
             if (determinant < 1e-6f) {
                 continue;
             }
 
-            const float              f = 1.0f / determinant;
+            const real               f = 1.0f / determinant;
             const Terathon::Vector3D s = origin - v0;
-            const float              u = f * Terathon::Dot(s, h);
+            const real               u = f * Terathon::Dot(s, h);
 
             if (u < 0.0f || u > 1.0f) {
                 continue;
             }
 
             const Terathon::Vector3D q = Terathon::Cross(s, e1);
-            const float              v = f * Terathon::Dot(dir, q);
+            const real               v = f * Terathon::Dot(dir, q);
 
             if (v < 0.0f || u + v > 1.0f) {
                 continue;
             }
 
-            const float t = f * Terathon::Dot(e2, q);
+            const real t = f * Terathon::Dot(e2, q);
 
             if (t < 0.0f || t >= tNearest) {
                 continue;
@@ -113,7 +113,7 @@ public:
             normalNearest = Terathon::Normalize(Terathon::Cross(e1, e2));
         }
 
-        if (tNearest == FLT_MAX) {
+        if (tNearest == std::numeric_limits<real>::max()) {
             return std::nullopt;
         }
 

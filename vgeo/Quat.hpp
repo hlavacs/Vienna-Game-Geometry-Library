@@ -1,12 +1,14 @@
 #pragma once
 
+#include "vgeo/Real.hpp"
+
 namespace vgeo {
 
 struct Quat {
-    float x;
-    float y;
-    float z;
-    float w;
+    real x;
+    real y;
+    real z;
+    real w;
 };
 
 } // namespace vgeo

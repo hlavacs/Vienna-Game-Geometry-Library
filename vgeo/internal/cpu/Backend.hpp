@@ -6,6 +6,7 @@
 #include "vgeo/Mat4.hpp"
 #include "vgeo/Quat.hpp"
 #include "vgeo/RayResult.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/Shape.hpp"
 #include "vgeo/ShapeType.hpp"
 #include "vgeo/Vec3.hpp"
@@ -46,7 +47,7 @@ public:
         return m_aaBoxes.add(AaBox{halfExtents});
     }
 
-    GeometryHandle defineCapsule(float halfLength, float radius) {
+    GeometryHandle defineCapsule(real halfLength, real radius) {
         return m_capsules.add(Capsule{halfLength, radius});
     }
 
@@ -54,7 +55,7 @@ public:
         return m_convexHulls.add(ConvexHull{ConvexHullBuilder::build(points)});
     }
 
-    GeometryHandle defineSphere(float radius) {
+    GeometryHandle defineSphere(real radius) {
         return m_spheres.add(Sphere{radius});
     }
 
@@ -120,7 +121,7 @@ public:
         m_broadphase.update(h, getWorldShape(h));
     }
 
-    void setScale(InstanceHandle h, float scale) {
+    void setScale(InstanceHandle h, real scale) {
         m_cachedResults.reset();
         m_instances[h].scale = scale;
         m_broadphase.update(h, getWorldShape(h));
@@ -129,7 +130,7 @@ public:
     // Column-major 4x4 matrix combining rotation, scale, and translation
     vgeo::Mat4 getTransform(InstanceHandle h) const {
         const Terathon::Motor3D&    motor     = m_instances[h].motor;
-        const float                 scale     = m_instances[h].scale;
+        const real                  scale     = m_instances[h].scale;
         const Terathon::Transform3D transform = motor.GetTransformMatrix();
         vgeo::Mat4                  result{};
         for (int col = 0; col < 3; ++col) {
@@ -165,7 +166,7 @@ public:
         return {q.x, q.y, q.z, q.w};
     }
 
-    float getScale(InstanceHandle h) const {
+    real getScale(InstanceHandle h) const {
         return m_instances[h].scale;
     }
 

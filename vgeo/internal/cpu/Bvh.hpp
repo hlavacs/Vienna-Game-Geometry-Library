@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/Shape.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
@@ -145,15 +146,15 @@ private:
             max.z               = std::max(max.z, c.z);
         }
 
-        float spreadX = max.x - min.x;
-        float spreadY = max.y - min.y;
-        float spreadZ = max.z - min.z;
+        real spreadX = max.x - min.x;
+        real spreadY = max.y - min.y;
+        real spreadZ = max.z - min.z;
 
         int axis = (spreadX > spreadY && spreadX > spreadZ) ? 0 : (spreadY > spreadZ) ? 1 : 2;
 
-        float midpoint = (axis == 0)   ? (min.x + max.x) * 0.5f
-                         : (axis == 1) ? (min.y + max.y) * 0.5f
-                                       : (min.z + max.z) * 0.5f;
+        real midpoint = (axis == 0)   ? (min.x + max.x) * 0.5f
+                        : (axis == 1) ? (min.y + max.y) * 0.5f
+                                      : (min.z + max.z) * 0.5f;
 
         auto splitPoint = std::partition(m_indices.begin() + begin, m_indices.begin() + end, [&](uint32_t index) {
             auto centroid = m_shapeEntries[index].bv.centroid();

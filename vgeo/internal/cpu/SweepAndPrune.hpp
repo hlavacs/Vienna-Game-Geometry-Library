@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/Shape.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
@@ -87,7 +88,7 @@ private:
 
     struct Endpoint {
         InstanceHandle handle;
-        float          value;
+        real           value;
         EndpointType   type;
     };
 

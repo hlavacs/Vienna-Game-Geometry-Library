@@ -1,11 +1,13 @@
 #pragma once
 
+#include "vgeo/Real.hpp"
+
 namespace vgeo {
 
 struct Vec3 {
-    float x;
-    float y;
-    float z;
+    real x;
+    real y;
+    real z;
 };
 
 } // namespace vgeo

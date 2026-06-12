@@ -4,6 +4,7 @@
 // https://winter.dev/articles/epa-algorithm/
 
 #include "vgeo/CollisionResults.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/internal/PolytopeUtils.hpp"
 #include "vgeo/internal/cpu/narrowphase/Gjk.hpp"
 
@@ -20,8 +21,8 @@
 
 namespace vgeo::internal::cpu {
 
-inline constexpr int   maxEpaIterations = 64;
-inline constexpr float epaTolerance     = 1e-6f;
+inline constexpr int  maxEpaIterations = 64;
+inline constexpr real epaTolerance     = 1e-6f;
 
 enum class EpaFailure {
     Degenerate,
@@ -33,7 +34,7 @@ struct EpaFace {
     uint32_t           b;
     uint32_t           c;
     Terathon::Vector3D normal;
-    float              distanceToOrigin;
+    real               distanceToOrigin;
 };
 
 inline std::optional<EpaFace>
@@ -46,8 +47,8 @@ makeFace(std::span<const Terathon::Point3D> vertices, uint32_t a, uint32_t b, ui
         return std::nullopt;
     }
 
-    normal         = Terathon::Normalize(normal);
-    float distance = Terathon::Dot(normal, vertices[a]);
+    normal        = Terathon::Normalize(normal);
+    real distance = Terathon::Dot(normal, vertices[a]);
 
     if (distance < 0.0f) {
         std::swap(b, c);
@@ -76,7 +77,7 @@ struct EpaPolytope {
     std::vector<Terathon::Point3D> supportA;
     std::vector<Terathon::Point3D> supportB;
     std::vector<EpaFace>           faces;
-    float                          tolerance;
+    real                           tolerance;
 
     static std::optional<EpaPolytope> create(const Simplex& simplex) {
         EpaPolytope p;
@@ -127,7 +128,7 @@ struct EpaPolytope {
         for (const EpaFace& face : faces) {
             Terathon::Plane3D plane =
                 Terathon::Unitize(Terathon::Plane3D{vertices[face.a], vertices[face.b], vertices[face.c]});
-            float signedDist =
+            real signedDist =
                 Terathon::Antiwedge(Terathon::Point3D{supportPoint.x, supportPoint.y, supportPoint.z}, plane);
             if (signedDist > tolerance) {
                 visibleFaces.push_back(face);
@@ -178,26 +179,26 @@ struct EpaPolytope {
     }
 };
 
-inline std::tuple<float, float, float>
+inline std::tuple<real, real, real>
 closestPointBarycentrics(const Terathon::Point3D& a, const Terathon::Point3D& b, const Terathon::Point3D& c) {
     Terathon::Vector3D ab = b - a;
     Terathon::Vector3D ac = c - a;
     Terathon::Vector3D ao = -a;
 
-    float ab_ab = Terathon::Dot(ab, ab);
-    float ab_ac = Terathon::Dot(ab, ac);
-    float ac_ac = Terathon::Dot(ac, ac);
-    float ao_ab = Terathon::Dot(ao, ab);
-    float ao_ac = Terathon::Dot(ao, ac);
+    real ab_ab = Terathon::Dot(ab, ab);
+    real ab_ac = Terathon::Dot(ab, ac);
+    real ac_ac = Terathon::Dot(ac, ac);
+    real ao_ab = Terathon::Dot(ao, ab);
+    real ao_ac = Terathon::Dot(ao, ac);
 
-    float denominator = ab_ab * ac_ac - ab_ac * ab_ac;
+    real denominator = ab_ab * ac_ac - ab_ac * ab_ac;
     if (std::abs(denominator) < 1e-6f) {
         return {1.0f, 0.0f, 0.0f};
     }
 
-    float v = (ac_ac * ao_ab - ab_ac * ao_ac) / denominator;
-    float w = (ab_ab * ao_ac - ab_ac * ao_ab) / denominator;
-    float u = 1.0f - v - w;
+    real v = (ac_ac * ao_ab - ab_ac * ao_ac) / denominator;
+    real w = (ab_ab * ao_ac - ab_ac * ao_ab) / denominator;
+    real u = 1.0f - v - w;
 
     if (u < 0.0f) {
         u = 0.0f;
@@ -209,7 +210,7 @@ closestPointBarycentrics(const Terathon::Point3D& a, const Terathon::Point3D& b,
         w = 0.0f;
     }
 
-    float sum = u + v + w;
+    real sum = u + v + w;
     if (sum > 0.0f) {
         u /= sum;
         v /= sum;
@@ -223,7 +224,7 @@ closestPointBarycentrics(const Terathon::Point3D& a, const Terathon::Point3D& b,
     return {u, v, w};
 }
 
-inline Contact buildCollisionContactFromFace(const EpaPolytope& polytope, const EpaFace& face, float depth) {
+inline Contact buildCollisionContactFromFace(const EpaPolytope& polytope, const EpaFace& face, real depth) {
     const Terathon::Point3D& v0_mink = polytope.vertices[face.a];
     const Terathon::Point3D& v1_mink = polytope.vertices[face.b];
     const Terathon::Point3D& v2_mink = polytope.vertices[face.c];
@@ -267,13 +268,13 @@ std::expected<Contact, EpaFailure> epa(const ShapeA& shapeA, const ShapeB& shape
 
         const EpaFace&     closest  = polytope->faces[*faceIdx];
         Terathon::Vector3D normal   = closest.normal;
-        float              faceDist = closest.distanceToOrigin;
+        real               faceDist = closest.distanceToOrigin;
 
         auto supportA = shapeA.support(normal);
         auto supportB = shapeB.support(-normal);
 
         Terathon::Vector3D minkowskiDiff{supportA.x - supportB.x, supportA.y - supportB.y, supportA.z - supportB.z};
-        float              supportDist = Terathon::Dot(normal, minkowskiDiff);
+        real               supportDist = Terathon::Dot(normal, minkowskiDiff);
 
         if (std::abs(supportDist - faceDist) <= polytope->tolerance) {
             Contact contact = buildCollisionContactFromFace(*polytope, closest, faceDist);

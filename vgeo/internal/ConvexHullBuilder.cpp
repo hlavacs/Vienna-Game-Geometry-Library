@@ -16,6 +16,7 @@
 
 namespace {
 
+using vgeo::real;
 using vgeo::internal::HalfEdge;
 using vgeo::internal::invalidIndex;
 
@@ -70,10 +71,10 @@ std::array<uint32_t, 6> findExtremePoints(std::span<const Terathon::Point3D> poi
 std::pair<uint32_t, uint32_t> findMostDistantPair(std::span<const Terathon::Point3D> points) {
     const std::array<uint32_t, 6> extremePoints = findExtremePoints(points);
     uint32_t                      a = invalidIndex, b = invalidIndex;
-    float                         maxDistSq = 0.0f;
+    real                          maxDistSq = 0.0f;
     for (uint32_t i = 0; i < 6; ++i) {
         for (uint32_t j = i + 1; j < 6; ++j) {
-            const float distSq =
+            const real distSq =
                 Terathon::SquaredWeightNorm(Terathon::Wedge(points[extremePoints[i]], points[extremePoints[j]]));
             if (distSq > maxDistSq) {
                 maxDistSq = distSq;
@@ -90,14 +91,14 @@ uint32_t findFurthestFromLine(std::span<const Terathon::Point3D> points, uint32_
         Terathon::Unitize(Terathon::Wedge(Terathon::Point3D{points[a].x, points[a].y, points[a].z},
                                           Terathon::Point3D{points[b].x, points[b].y, points[b].z}));
     uint32_t c         = invalidIndex;
-    float    maxDistSq = 0.0f;
+    real     maxDistSq = 0.0f;
     for (uint32_t i = 0; i < points.size(); ++i) {
         if (i == a || i == b) {
             continue;
         }
         Terathon::Vector3D perp =
             Terathon::Cross(line.v, Terathon::Point3D{points[i].x, points[i].y, points[i].z}) + line.m.xyz;
-        float distSq = Terathon::SquaredMag(perp);
+        real distSq = Terathon::SquaredMag(perp);
         if (distSq > maxDistSq) {
             maxDistSq = distSq;
             c         = i;
@@ -109,12 +110,12 @@ uint32_t findFurthestFromLine(std::span<const Terathon::Point3D> points, uint32_
 uint32_t findFurthestFromPlane(std::span<const Terathon::Point3D> points, uint32_t a, uint32_t b, uint32_t c) {
     Terathon::Plane3D plane     = Terathon::Unitize(Terathon::Plane3D{points[a], points[b], points[c]});
     uint32_t          d         = invalidIndex;
-    float             maxDistSq = 0.0f;
+    real              maxDistSq = 0.0f;
     for (uint32_t i = 0; i < points.size(); ++i) {
         if (i == a || i == b || i == c) {
             continue;
         }
-        float dist = Terathon::Antiwedge(points[i], plane);
+        real dist = Terathon::Antiwedge(points[i], plane);
         if (dist * dist > maxDistSq) {
             maxDistSq = dist * dist;
             d         = i;
@@ -163,13 +164,13 @@ HullMesh buildInitialTetrahedron(std::span<const Terathon::Point3D> points) {
     return mesh;
 }
 
-void assignOutsideSets(HullMesh& mesh, std::span<const Terathon::Point3D> points, float epsilon) {
+void assignOutsideSets(HullMesh& mesh, std::span<const Terathon::Point3D> points, real epsilon) {
     for (uint32_t i = 0; i < points.size(); ++i) {
-        float    maxDist  = epsilon;
+        real     maxDist  = epsilon;
         uint32_t bestFace = invalidIndex;
 
         for (uint32_t f = 0; f < mesh.faces.size(); ++f) {
-            float dist = Terathon::Antiwedge(points[i], mesh.faces[f].plane);
+            real dist = Terathon::Antiwedge(points[i], mesh.faces[f].plane);
             if (dist > maxDist) {
                 maxDist  = dist;
                 bestFace = f;
@@ -193,9 +194,9 @@ uint32_t findActiveFace(const HullMesh& mesh) {
 
 uint32_t findFurthestInSet(const Face& face, std::span<const Terathon::Point3D> points) {
     uint32_t eyeIndex = invalidIndex;
-    float    maxDist  = 0.0f;
+    real     maxDist  = 0.0f;
     for (uint32_t index : face.outsideSet) {
-        float dist = Terathon::Antiwedge(points[index], face.plane);
+        real dist = Terathon::Antiwedge(points[index], face.plane);
         if (dist > maxDist) {
             maxDist  = dist;
             eyeIndex = index;
@@ -209,7 +210,7 @@ struct HorizonResult {
     std::vector<uint32_t> horizon;
 };
 
-HorizonResult findHorizon(const HullMesh& mesh, uint32_t seedFace, const Terathon::Point3D& eye, float epsilon) {
+HorizonResult findHorizon(const HullMesh& mesh, uint32_t seedFace, const Terathon::Point3D& eye, real epsilon) {
     HorizonResult         result;
     std::vector<bool>     visited(mesh.faces.size(), false);
     std::vector<uint32_t> stack{seedFace};
@@ -224,7 +225,7 @@ HorizonResult findHorizon(const HullMesh& mesh, uint32_t seedFace, const Teratho
         for (int i = 0; i < 3; ++i) {
             uint32_t twinHe   = mesh.halfEdges[he].twin;
             uint32_t twinFace = mesh.halfEdges[twinHe].face;
-            float    dist     = Terathon::Antiwedge(eye, mesh.faces[twinFace].plane);
+            real     dist     = Terathon::Antiwedge(eye, mesh.faces[twinFace].plane);
 
             if (dist > epsilon) {
                 if (!visited[twinFace]) {
@@ -308,7 +309,7 @@ void redistributePoints(HullMesh&                          mesh,
                         const std::vector<uint32_t>&       visibleFaces,
                         const std::vector<uint32_t>&       newFaces,
                         std::span<const Terathon::Point3D> points,
-                        float                              epsilon) {
+                        real                               epsilon) {
     std::vector<uint32_t> orphaned;
     for (uint32_t f : visibleFaces) {
         orphaned.insert(orphaned.end(), mesh.faces[f].outsideSet.begin(), mesh.faces[f].outsideSet.end());
@@ -317,10 +318,10 @@ void redistributePoints(HullMesh&                          mesh,
     }
 
     for (uint32_t index : orphaned) {
-        float    maxDist  = epsilon;
+        real     maxDist  = epsilon;
         uint32_t bestFace = invalidIndex;
         for (uint32_t f : newFaces) {
-            float dist = Terathon::Antiwedge(points[index], mesh.faces[f].plane);
+            real dist = Terathon::Antiwedge(points[index], mesh.faces[f].plane);
             if (dist > maxDist) {
                 maxDist  = dist;
                 bestFace = f;
@@ -334,7 +335,7 @@ void redistributePoints(HullMesh&                          mesh,
 
 HullMesh computeHull(std::span<const vgeo::Vec3> inputPoints) {
     std::vector<Terathon::Point3D> points  = convertPoints(inputPoints);
-    float                          epsilon = vgeo::internal::calculateRelativeEpsilon(points);
+    real                           epsilon = vgeo::internal::calculateRelativeEpsilon(points);
     HullMesh                       mesh    = buildInitialTetrahedron(points);
     assignOutsideSets(mesh, points, epsilon);
 

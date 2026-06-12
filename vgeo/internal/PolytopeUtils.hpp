@@ -1,5 +1,7 @@
 #pragma once
 
+#include "vgeo/Real.hpp"
+
 #include <TSVector3D.h>
 
 #include <algorithm>
@@ -27,10 +29,10 @@ inline void addBoundaryEdge(std::vector<DirectedEdge>& boundary, uint32_t a, uin
     boundary.emplace_back(a, b);
 }
 
-inline float calculateRelativeEpsilon(std::span<const Terathon::Point3D> points) {
-    float maxX = 0.0f;
-    float maxY = 0.0f;
-    float maxZ = 0.0f;
+inline real calculateRelativeEpsilon(std::span<const Terathon::Point3D> points) {
+    real maxX = 0.0f;
+    real maxY = 0.0f;
+    real maxZ = 0.0f;
     for (const Terathon::Point3D& p : points) {
         maxX = std::max(maxX, std::abs(p.x));
         maxY = std::max(maxY, std::abs(p.y));
@@ -39,7 +41,7 @@ inline float calculateRelativeEpsilon(std::span<const Terathon::Point3D> points)
 
     // epsilon = 3 * (max|x| + max|y| + max|z|) * FLT_EPSILON
     // (Dirk Gregorius, Implementing QuickHull, GDC 2014)
-    return 3.0f * (maxX + maxY + maxZ) * std::numeric_limits<float>::epsilon();
+    return 3.0f * (maxX + maxY + maxZ) * std::numeric_limits<real>::epsilon();
 }
 
 inline constexpr uint32_t invalidIndex = std::numeric_limits<uint32_t>::max();

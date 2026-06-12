@@ -14,17 +14,16 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 # Dependencies
 include(FetchContent)
 
-FetchContent_Declare(
-    terathon_math_library
-    GIT_REPOSITORY https://github.com/EricLengyel/Terathon-Math-Library.git
-    GIT_TAG        40fcfa252313af6c37b89cfe09c530ac6174a06b
-    EXCLUDE_FROM_ALL
-)
-FetchContent_MakeAvailable(terathon_math_library)
+option(VGEO_DOUBLE_PRECISION "Use double precision floating point" OFF)
 
-file(GLOB TERATHON_SOURCES ${terathon_math_library_SOURCE_DIR}/*.cpp)
+set(TERATHON_MATH_LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/terathon_math_library)
+
+file(GLOB TERATHON_SOURCES ${TERATHON_MATH_LIBRARY_DIR}/*.cpp)
 add_library(TerathonMathLibrary STATIC ${TERATHON_SOURCES})
-target_include_directories(TerathonMathLibrary PUBLIC ${terathon_math_library_SOURCE_DIR})
+target_include_directories(TerathonMathLibrary PUBLIC ${TERATHON_MATH_LIBRARY_DIR})
+if(VGEO_DOUBLE_PRECISION)
+    target_compile_definitions(TerathonMathLibrary PUBLIC VGEO_DOUBLE_PRECISION)
+endif()
 
 find_package(Vulkan REQUIRED)
 

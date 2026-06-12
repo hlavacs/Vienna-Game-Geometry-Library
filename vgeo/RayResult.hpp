@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/Vec3.hpp"
 
 #include <vector>
@@ -11,7 +12,7 @@ struct RayHit {
     InstanceHandle shape;
     Vec3           position;
     Vec3           normal;
-    float          distance;
+    real           distance;
 };
 
 struct RayResult {

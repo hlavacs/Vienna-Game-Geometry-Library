@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Real.hpp"
 #include "vgeo/Shape.hpp"
 #include "vgeo/internal/CandidatePair.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
@@ -10,9 +11,9 @@
 #include <TSVector3D.h>
 
 #include <algorithm>
-#include <cfloat>
 #include <climits>
 #include <cmath>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -21,7 +22,7 @@ namespace vgeo::internal::cpu {
 
 class IndexedGrid {
 public:
-    IndexedGrid(const float cellSize) : m_cellSize{cellSize}, m_boundsMin{INT_MAX}, m_boundsMax{INT_MIN} {}
+    IndexedGrid(const real cellSize) : m_cellSize{cellSize}, m_boundsMin{INT_MAX}, m_boundsMax{INT_MIN} {}
 
     void add(InstanceHandle handle, Shape shape) {
         const Aabb aabb = std::visit([](const auto& shape) { return shape.template computeBv<Aabb>(); }, shape);
@@ -94,21 +95,21 @@ public:
         }
 
         // Clip the ray to it is inside the whole grid
-        const float gridMinX = m_boundsMin.x * m_cellSize;
-        const float gridMinY = m_boundsMin.y * m_cellSize;
-        const float gridMinZ = m_boundsMin.z * m_cellSize;
-        const float gridMaxX = (m_boundsMax.x + 1) * m_cellSize;
-        const float gridMaxY = (m_boundsMax.y + 1) * m_cellSize;
-        const float gridMaxZ = (m_boundsMax.z + 1) * m_cellSize;
+        const real gridMinX = m_boundsMin.x * m_cellSize;
+        const real gridMinY = m_boundsMin.y * m_cellSize;
+        const real gridMinZ = m_boundsMin.z * m_cellSize;
+        const real gridMaxX = (m_boundsMax.x + 1) * m_cellSize;
+        const real gridMaxY = (m_boundsMax.y + 1) * m_cellSize;
+        const real gridMaxZ = (m_boundsMax.z + 1) * m_cellSize;
 
-        float tEntry = 0.0f;
-        float tExit  = FLT_MAX;
+        real tEntry = 0.0f;
+        real tExit  = std::numeric_limits<real>::max();
 
         for (int axis = 0; axis < 3; ++axis) {
-            const float originAxis = axis == 0 ? origin.x : axis == 1 ? origin.y : origin.z;
-            const float dirAxis    = axis == 0 ? dir.x : axis == 1 ? dir.y : dir.z;
-            const float slabMin    = axis == 0 ? gridMinX : axis == 1 ? gridMinY : gridMinZ;
-            const float slabMax    = axis == 0 ? gridMaxX : axis == 1 ? gridMaxY : gridMaxZ;
+            const real originAxis = axis == 0 ? origin.x : axis == 1 ? origin.y : origin.z;
+            const real dirAxis    = axis == 0 ? dir.x : axis == 1 ? dir.y : dir.z;
+            const real slabMin    = axis == 0 ? gridMinX : axis == 1 ? gridMinY : gridMinZ;
+            const real slabMax    = axis == 0 ? gridMaxX : axis == 1 ? gridMaxY : gridMaxZ;
 
             if (std::abs(dirAxis) < 1e-6f) {
                 if (originAxis < slabMin || originAxis > slabMax) {
@@ -117,8 +118,8 @@ public:
                 continue;
             }
 
-            float t0 = (slabMin - originAxis) / dirAxis;
-            float t1 = (slabMax - originAxis) / dirAxis;
+            real t0 = (slabMin - originAxis) / dirAxis;
+            real t1 = (slabMax - originAxis) / dirAxis;
 
             if (t0 > t1) {
                 std::swap(t0, t1);
@@ -136,7 +137,7 @@ public:
                                          origin.y >= gridMaxY || origin.z < gridMinZ || origin.z >= gridMaxZ;
 
         if (isOriginOutsideGrid) {
-            constexpr float eps = 1e-6f;
+            constexpr real eps = 1e-6f;
             origin.x += dir.x * (tEntry + eps);
             origin.y += dir.y * (tEntry + eps);
             origin.z += dir.z * (tEntry + eps);
@@ -150,16 +151,16 @@ public:
         const int stepY = dir.y > 0 ? 1 : dir.y < 0 ? -1 : 0;
         const int stepZ = dir.z > 0 ? 1 : dir.z < 0 ? -1 : 0;
 
-        const float tDeltaX = std::abs(dir.x) > 1e-6f ? std::abs(m_cellSize / dir.x) : FLT_MAX;
-        const float tDeltaY = std::abs(dir.y) > 1e-6f ? std::abs(m_cellSize / dir.y) : FLT_MAX;
-        const float tDeltaZ = std::abs(dir.z) > 1e-6f ? std::abs(m_cellSize / dir.z) : FLT_MAX;
+        const real tDeltaX = std::abs(dir.x) > 1e-6f ? std::abs(m_cellSize / dir.x) : std::numeric_limits<real>::max();
+        const real tDeltaY = std::abs(dir.y) > 1e-6f ? std::abs(m_cellSize / dir.y) : std::numeric_limits<real>::max();
+        const real tDeltaZ = std::abs(dir.z) > 1e-6f ? std::abs(m_cellSize / dir.z) : std::numeric_limits<real>::max();
 
-        float tMaxX =
-            std::abs(dir.x) > 1e-6f ? ((originCellX + (stepX > 0 ? 1 : 0)) * m_cellSize - origin.x) / dir.x : FLT_MAX;
-        float tMaxY =
-            std::abs(dir.y) > 1e-6f ? ((originCellY + (stepY > 0 ? 1 : 0)) * m_cellSize - origin.y) / dir.y : FLT_MAX;
-        float tMaxZ =
-            std::abs(dir.z) > 1e-6f ? ((originCellZ + (stepZ > 0 ? 1 : 0)) * m_cellSize - origin.z) / dir.z : FLT_MAX;
+        real tMaxX = std::abs(dir.x) > 1e-6f ? ((originCellX + (stepX > 0 ? 1 : 0)) * m_cellSize - origin.x) / dir.x
+                                             : std::numeric_limits<real>::max();
+        real tMaxY = std::abs(dir.y) > 1e-6f ? ((originCellY + (stepY > 0 ? 1 : 0)) * m_cellSize - origin.y) / dir.y
+                                             : std::numeric_limits<real>::max();
+        real tMaxZ = std::abs(dir.z) > 1e-6f ? ((originCellZ + (stepZ > 0 ? 1 : 0)) * m_cellSize - origin.z) / dir.z
+                                             : std::numeric_limits<real>::max();
 
         int currentX = originCellX;
         int currentY = originCellY;
@@ -194,9 +195,9 @@ public:
     }
 
 private:
-    const float m_cellSize;
-    Cell        m_boundsMin;
-    Cell        m_boundsMax;
+    const real m_cellSize;
+    Cell       m_boundsMin;
+    Cell       m_boundsMax;
 
     std::unordered_map<Cell, std::vector<InstanceHandle>> m_grid;        // which handles are in a cell
     std::unordered_map<InstanceHandle, std::vector<Cell>> m_handleCells; // which cells does a handle occupy
