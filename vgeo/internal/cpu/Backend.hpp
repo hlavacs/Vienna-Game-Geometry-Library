@@ -53,8 +53,8 @@ public:
         return m_capsules.add(Capsule{halfLength, radius});
     }
 
-    GeometryHandle defineConvexHull(std::span<const Vec3> points) {
-        return m_convexHulls.add(ConvexHull{ConvexHullBuilder::build(points)});
+    GeometryHandle definePolytope(std::span<const Vec3> points) {
+        return m_polytopes.add(Polytope{ConvexHullBuilder::build(points)});
     }
 
     GeometryHandle defineSphere(real radius) {
@@ -69,8 +69,8 @@ public:
             case ShapeType::Capsule:
                 m_capsules.remove(geometry);
                 break;
-            case ShapeType::ConvexHull:
-                m_convexHulls.remove(geometry);
+            case ShapeType::Polytope:
+                m_polytopes.remove(geometry);
                 break;
             case ShapeType::Sphere:
                 m_spheres.remove(geometry);
@@ -87,8 +87,8 @@ public:
                 return m_aaBoxes.isValid(geometry);
             case ShapeType::Capsule:
                 return m_capsules.isValid(geometry);
-            case ShapeType::ConvexHull:
-                return m_convexHulls.isValid(geometry);
+            case ShapeType::Polytope:
+                return m_polytopes.isValid(geometry);
             case ShapeType::Sphere:
                 return m_spheres.isValid(geometry);
             default:
@@ -277,8 +277,8 @@ private:
                 return m_aaBoxes[geometry];
             case ShapeType::Capsule:
                 return m_capsules[geometry];
-            case ShapeType::ConvexHull:
-                return m_convexHulls[geometry];
+            case ShapeType::Polytope:
+                return m_polytopes[geometry];
             case ShapeType::Sphere:
                 return m_spheres[geometry];
             default:
@@ -302,7 +302,7 @@ private:
 
     ShapePool<AaBox, ShapeType::AaBox>           m_aaBoxes;
     ShapePool<Capsule, ShapeType::Capsule>       m_capsules;
-    ShapePool<ConvexHull, ShapeType::ConvexHull> m_convexHulls;
+    ShapePool<Polytope, ShapeType::Polytope>     m_polytopes;
     ShapePool<Sphere, ShapeType::Sphere>         m_spheres;
 
     InstancePool<ShapeInstance>                                 m_instances;

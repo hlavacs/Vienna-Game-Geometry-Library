@@ -16,11 +16,11 @@
 
 namespace vgeo::internal::cpu {
 
-class ConvexHull {
+class Polytope {
 public:
-    ConvexHull() = default;
+    Polytope() = default;
 
-    explicit ConvexHull(internal::ConvexHullData data) {
+    explicit Polytope(internal::ConvexHullData data) {
         for (const Vec3& v : data.vertices) {
             m_vertices.emplace_back(v.x, v.y, v.z);
         }
@@ -47,8 +47,8 @@ public:
         return {sum.x * invCount, sum.y * invCount, sum.z * invCount};
     }
 
-    [[nodiscard]] ConvexHull applyTransform(const Terathon::Motor3D& motor, real scale) const {
-        ConvexHull result = *this;
+    [[nodiscard]] Polytope applyTransform(const Terathon::Motor3D& motor, real scale) const {
+        Polytope result = *this;
         for (auto& v : result.m_vertices) {
             v = Terathon::Transform(Terathon::Point3D{v.x * scale, v.y * scale, v.z * scale}, motor);
         }
@@ -131,7 +131,7 @@ private:
 };
 
 template <>
-[[nodiscard]] inline Aabb ConvexHull::computeBv<Aabb>() const {
+[[nodiscard]] inline Aabb Polytope::computeBv<Aabb>() const {
     Terathon::Point3D min = m_vertices[0];
     Terathon::Point3D max = m_vertices[0];
     for (const Terathon::Point3D& vertex : m_vertices) {
@@ -141,6 +141,6 @@ template <>
     return {min, max};
 }
 
-static_assert(CollisionShape<ConvexHull, Aabb>);
+static_assert(CollisionShape<Polytope, Aabb>);
 
 } // namespace vgeo::internal::cpu

@@ -28,12 +28,12 @@ class GpuBackend {
     VulkanHandler                      m_vulkanHandler;
     GeometryRegistry<ShapeType::AaBox> m_aaBoxRegistry;
     // GeometryRegistry<ShapeType::Capsule> m_capsuleRegistry;
-    // GeometryRegistry<ShapeType::ConvexHull> m_convexHullRegistry;
+    // GeometryRegistry<ShapeType::Polytope> m_polytopeRegistry;
     // GeometryRegistry<ShapeType::Sphere> m_sphereRegistry;
 
     std::vector<AaBox> m_aaBoxes;
     // std::vector<Capsule> m_capsules;
-    // std::vector<ConvexHull> m_convexHulls;
+    // std::vector<Polytope> m_polytopes;
     // std::vector<Sphere> m_spheres;
 
 public:
@@ -49,8 +49,8 @@ public:
         return addShape(m_capsuleRegistry, m_capsules, Capsule{desc.a, desc.b, desc.radius});
     }
 
-    GeometryHandle define(const ConvexHullDesc& desc) {
-        return addShape(m_convexHullRegistry, m_convexHulls, ConvexHull{ConvexHullBuilder::build(desc.points)});
+    GeometryHandle define(const PolytopeDesc& desc) {
+        return addShape(m_polytopeRegistry, m_polytopes, Polytope{ConvexHullBuilder::build(desc.points)});
     }
 
     GeometryHandle define(const SphereDesc& desc) {
@@ -68,9 +68,9 @@ public:
                 m_capsuleRegistry.free(h);
                 m_capsules[index] = Capsule{};
                 break;
-            case ShapeType::ConvexHull:
-                m_convexHullRegistry.free(h);
-                m_convexHulls[index] = ConvexHull{};
+            case ShapeType::Polytope:
+                m_polytopeRegistry.free(h);
+                m_polytopes[index] = Polytope{};
                 break;
             case ShapeType::Sphere:
                 m_sphereRegistry.free(h);

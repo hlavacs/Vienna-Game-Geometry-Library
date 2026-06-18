@@ -38,8 +38,8 @@ public:
         return m_backend.defineCapsule(halfLength, radius);
     }
 
-    GeometryHandle defineConvexHull(std::span<const Vec3> points) {
-        return m_backend.defineConvexHull(points);
+    GeometryHandle definePolytope(std::span<const Vec3> points) {
+        return m_backend.definePolytope(points);
     }
 
     GeometryHandle defineSphere(real radius) {

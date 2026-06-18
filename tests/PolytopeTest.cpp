@@ -1,4 +1,4 @@
-#include "vgeo/internal/cpu/shapes/ConvexHull.hpp"
+#include "vgeo/internal/cpu/shapes/Polytope.hpp"
 
 #include "vgeo/Vec3.hpp"
 #include "vgeo/internal/ConvexHullBuilder.hpp"
@@ -16,18 +16,18 @@ static ConvexHullData buildTetrahedron() {
     return ConvexHullBuilder::build(points);
 }
 
-TEST_CASE("ConvexHull centroid", "[ConvexHull]") {
-    ConvexHull hull{buildTetrahedron()};
-    auto       c = hull.centroid();
+TEST_CASE("Polytope centroid", "[Polytope]") {
+    Polytope hull{buildTetrahedron()};
+    auto     c = hull.centroid();
 
     CHECK(c.x == Approx(0.5f));
     CHECK(c.y == Approx(0.5f));
     CHECK(c.z == Approx(0.5f));
 }
 
-TEST_CASE("ConvexHull computeBv (Aabb)", "[ConvexHull]") {
-    ConvexHull hull{buildTetrahedron()};
-    auto       bv = hull.computeBv<Aabb>();
+TEST_CASE("Polytope computeBv (Aabb)", "[Polytope]") {
+    Polytope hull{buildTetrahedron()};
+    auto     bv = hull.computeBv<Aabb>();
 
     CHECK(bv.getMin().x == Approx(0.0f));
     CHECK(bv.getMin().y == Approx(0.0f));
@@ -37,8 +37,8 @@ TEST_CASE("ConvexHull computeBv (Aabb)", "[ConvexHull]") {
     CHECK(bv.getMax().z == Approx(2.0f));
 }
 
-TEST_CASE("ConvexHull support", "[ConvexHull]") {
-    ConvexHull hull{buildTetrahedron()};
+TEST_CASE("Polytope support", "[Polytope]") {
+    Polytope hull{buildTetrahedron()};
 
     auto a = hull.support({1.0f, 0.0f, 0.0f});
     CHECK(a.x == Approx(2.0f));
