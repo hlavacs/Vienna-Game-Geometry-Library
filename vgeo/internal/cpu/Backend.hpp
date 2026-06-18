@@ -24,6 +24,8 @@
 #include <cassert>
 #include <optional>
 #include <span>
+#include <unordered_map>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -98,7 +100,6 @@ public:
     // Instances
 
     InstanceHandle add(GeometryHandle geometry, Vec3 position = {}) {
-        m_cachedResults.reset();
         InstanceHandle h = m_instances.add(ShapeInstance{
             geometry, Terathon::Motor3D::MakeTranslation(Terathon::Vector3D{position.x, position.y, position.z})});
         m_broadphase.add(h, getWorldShape(h));
@@ -106,24 +107,24 @@ public:
     }
 
     void setPosition(InstanceHandle h, Vec3 position) {
-        m_cachedResults.reset();
         const Terathon::Quaternion rotation = m_instances[h].motor.v;
         m_instances[h].motor =
             Terathon::Motor3D::MakeTranslation({position.x, position.y, position.z}) * Terathon::Motor3D{rotation};
+        m_dirtyInstances.insert(h);
         m_broadphase.update(h, getWorldShape(h));
     }
 
     void setRotation(InstanceHandle h, vgeo::Quat rotation) {
-        m_cachedResults.reset();
         const Terathon::Point3D position = m_instances[h].motor.GetPosition();
         m_instances[h].motor = Terathon::Motor3D::MakeTranslation({position.x, position.y, position.z}) *
                                Terathon::Motor3D{Terathon::Quaternion{rotation.x, rotation.y, rotation.z, rotation.w}};
+        m_dirtyInstances.insert(h);
         m_broadphase.update(h, getWorldShape(h));
     }
 
     void setScale(InstanceHandle h, real scale) {
-        m_cachedResults.reset();
         m_instances[h].scale = scale;
+        m_dirtyInstances.insert(h);
         m_broadphase.update(h, getWorldShape(h));
     }
 
@@ -147,9 +148,10 @@ public:
     }
 
     void remove(InstanceHandle h) {
-        m_cachedResults.reset();
         m_broadphase.remove(h);
         m_instances.remove(h);
+        m_dirtyInstances.erase(h);
+        m_pairCacheNeedsPrune = true;
     }
 
     bool isValid(InstanceHandle h) const {
@@ -173,11 +175,21 @@ public:
     // Queries
 
     CollisionResults queryAll() const {
-        if (m_cachedResults.has_value()) {
-            return m_cachedResults.value();
+        if (m_pairCacheNeedsPrune) {
+            std::erase_if(m_pairCache, [&](const auto& cachedPair) {
+                return !m_instances.isValid(cachedPair.second.a) || !m_instances.isValid(cachedPair.second.b);
+            });
+            m_pairCacheNeedsPrune = false;
         }
 
-        m_cachedResults.emplace();
+        if (!m_dirtyInstances.empty()) {
+            std::erase_if(m_pairCache, [&](const auto& cachedPair) {
+                return m_dirtyInstances.contains(cachedPair.second.a) || m_dirtyInstances.contains(cachedPair.second.b);
+            });
+            m_dirtyInstances.clear();
+        }
+
+        CollisionResults           results;
         std::vector<CandidatePair> candidates = m_broadphase.findCandidates();
 
         for (auto [handleA, handleB] : candidates) {
@@ -186,29 +198,51 @@ public:
 
             if (geometryA.getType() > geometryB.getType()) {
                 std::swap(handleA, handleB);
-                std::swap(geometryA, geometryB);
             }
 
-            Shape shapeA = getWorldShape(handleA);
-            Shape shapeB = getWorldShape(handleB);
-
-            std::optional<CollisionPair> result = std::visit(
-                [&](const auto& a, const auto& b) { return collide(handleA, a, handleB, b); }, shapeA, shapeB);
-
-            if (result) {
-                m_cachedResults->pairs.push_back(std::move(*result));
+            if (std::optional<CollisionPair> result = queryPair(handleA, handleB)) {
+                results.pairs.push_back(std::move(*result));
             }
         }
 
-        return m_cachedResults.value();
+        return results;
     }
 
     std::optional<CollisionPair> queryPair(InstanceHandle handleA, InstanceHandle handleB) const {
+        const bool dirty = m_dirtyInstances.contains(handleA) || m_dirtyInstances.contains(handleB);
+
+        const CandidatePair key{handleA, handleB};
+
+        if (!dirty) {
+            auto it = m_pairCache.find(key);
+            if (it != m_pairCache.end()) {
+                const CachedPairResult& cached = it->second;
+                if (cached.a == handleA && cached.b == handleB) {
+                    return cached.contact ? std::optional(CollisionPair{handleA, handleB, *cached.contact})
+                                          : std::nullopt;
+                }
+                if (cached.a == handleB && cached.b == handleA) {
+                    if (!cached.contact) {
+                        return std::nullopt;
+                    }
+                    Contact mirrored = *cached.contact;
+                    mirrored.normal  = {-mirrored.normal.x, -mirrored.normal.y, -mirrored.normal.z};
+                    std::swap(mirrored.witnessA, mirrored.witnessB);
+                    return CollisionPair{handleA, handleB, mirrored};
+                }
+            }
+        }
+
         Shape shapeA = getWorldShape(handleA);
         Shape shapeB = getWorldShape(handleB);
 
-        return std::visit(
-            [&](const auto& a, const auto& b) { return collide(handleA, a, handleB, b); }, shapeA, shapeB);
+        std::optional<CollisionPair> result =
+            std::visit([&](const auto& a, const auto& b) { return collide(handleA, a, handleB, b); }, shapeA, shapeB);
+
+        m_pairCache.insert_or_assign(
+            key, CachedPairResult{handleA, handleB, result ? std::optional(result->contact) : std::nullopt});
+
+        return result;
     }
 
     bool overlaps(InstanceHandle handleA, InstanceHandle handleB) const {
@@ -260,15 +294,23 @@ private:
             getLocalShape(instance.geometry));
     }
 
+    struct CachedPairResult {
+        InstanceHandle         a;
+        InstanceHandle         b;
+        std::optional<Contact> contact;
+    };
+
     ShapePool<AaBox, ShapeType::AaBox>           m_aaBoxes;
     ShapePool<Capsule, ShapeType::Capsule>       m_capsules;
     ShapePool<ConvexHull, ShapeType::ConvexHull> m_convexHulls;
     ShapePool<Sphere, ShapeType::Sphere>         m_spheres;
 
-    InstancePool<ShapeInstance>                       m_instances;
-    std::optional<vgeo::internal::gpu::VulkanHandler> m_vulkanHandler;
-    Bp                                                m_broadphase;
-    mutable std::optional<CollisionResults>           m_cachedResults;
+    InstancePool<ShapeInstance>                                 m_instances;
+    std::optional<vgeo::internal::gpu::VulkanHandler>           m_vulkanHandler;
+    Bp                                                          m_broadphase;
+    mutable std::unordered_map<CandidatePair, CachedPairResult> m_pairCache;
+    mutable std::unordered_set<InstanceHandle>                  m_dirtyInstances;
+    mutable bool                                                m_pairCacheNeedsPrune{false};
 };
 
 } // namespace vgeo::internal::cpu
