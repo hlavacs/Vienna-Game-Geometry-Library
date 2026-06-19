@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <initializer_list>
 
 namespace vgeo::internal::cpu {
@@ -15,6 +16,20 @@ inline constexpr int maxGjkIterations = 64;
 
 inline bool isSameDirection(const Terathon::Vector3D& a, const Terathon::Vector3D& b) {
     return Terathon::Dot(a, b) > 0.0f;
+}
+
+inline Terathon::Vector3D arbitraryPerpendicular(const Terathon::Vector3D& v) {
+    const Terathon::Vector3D axis = (std::abs(v.x) < std::abs(v.y))
+                                        ? ((std::abs(v.x) < std::abs(v.z)) ? Terathon::Vector3D{1.0f, 0.0f, 0.0f}
+                                                                           : Terathon::Vector3D{0.0f, 0.0f, 1.0f})
+                                        : ((std::abs(v.y) < std::abs(v.z)) ? Terathon::Vector3D{0.0f, 1.0f, 0.0f}
+                                                                           : Terathon::Vector3D{0.0f, 0.0f, 1.0f});
+    return Terathon::Cross(v, axis);
+}
+
+inline Terathon::Vector3D perpendicularTowards(const Terathon::Vector3D& edge, const Terathon::Vector3D& towards) {
+    const Terathon::Vector3D dir = Terathon::Cross(Terathon::Cross(edge, towards), edge);
+    return (Terathon::SquaredMag(dir) > 1e-12f) ? dir : arbitraryPerpendicular(edge);
 }
 
 template <typename ShapeA, typename ShapeB>
@@ -63,7 +78,7 @@ struct Simplex {
         Terathon::Vector3D ao = -a;
 
         if (isSameDirection(ab, ao)) {
-            dir = Terathon::Cross(Terathon::Cross(ab, ao), ab);
+            dir = perpendicularTowards(ab, ao);
         } else {
             set({points[0]});
             dir = ao;
@@ -83,7 +98,7 @@ struct Simplex {
         if (isSameDirection(Terathon::Cross(abc, ac), ao)) {
             if (isSameDirection(ac, ao)) {
                 set({points[0], points[2]});
-                dir = Terathon::Cross(Terathon::Cross(ac, ao), ac);
+                dir = perpendicularTowards(ac, ao);
             } else {
                 set({points[0], points[1]});
                 return lineCase(dir);
@@ -96,7 +111,7 @@ struct Simplex {
         } else {
             // flip winding so normal points toward origin
             set({points[0], points[2], points[1]});
-            dir = -abc;
+            dir = (Terathon::SquaredMag(abc) > 1e-12f) ? -abc : arbitraryPerpendicular(ab);
         }
 
         return false;

@@ -21,12 +21,14 @@
 
 namespace vgeo::internal::cpu {
 
-inline constexpr int  maxEpaIterations = 64;
-inline constexpr real epaTolerance     = 1e-6f;
+inline constexpr int    maxEpaIterations = 64;
+inline constexpr real   epaTolerance     = 1e-6f;
+inline constexpr size_t maxEpaFaces      = 2048;
 
 enum class EpaFailure {
     Degenerate,
     MaxIterations,
+    TooManyFaces,
 };
 
 struct EpaFace {
@@ -261,6 +263,10 @@ std::expected<Contact, EpaFailure> epa(const ShapeA& shapeA, const ShapeB& shape
     }
 
     for (int i = 0; i < maxEpaIterations; ++i) {
+        if (polytope->faces.size() > maxEpaFaces) {
+            return std::unexpected(EpaFailure::TooManyFaces);
+        }
+
         auto faceIdx = polytope->closestFaceIndex();
         if (!faceIdx) {
             return std::unexpected(EpaFailure::Degenerate);
