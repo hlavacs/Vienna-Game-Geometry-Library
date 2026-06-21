@@ -51,7 +51,7 @@ public:
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
-        dir               = Terathon::Normalize(dir);
+        dir = (Terathon::SquaredMag(dir) > 1e-12f) ? Terathon::Normalize(dir) : Terathon::Vector3D{1.0f, 0.0f, 0.0f};
         const real radius = getRadius();
         return {m_sphere.x + radius * dir.x, m_sphere.y + radius * dir.y, m_sphere.z + radius * dir.z};
     }

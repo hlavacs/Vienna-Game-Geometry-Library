@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <expected>
 #include <optional>
 #include <span>
 #include <tuple>
@@ -24,12 +23,6 @@ namespace vgeo::internal::cpu {
 inline constexpr int    maxEpaIterations = 64;
 inline constexpr real   epaTolerance     = 1e-6f;
 inline constexpr size_t maxEpaFaces      = 2048;
-
-enum class EpaFailure {
-    Degenerate,
-    MaxIterations,
-    TooManyFaces,
-};
 
 struct EpaFace {
     uint32_t           a;
@@ -255,21 +248,30 @@ inline Contact buildCollisionContactFromFace(const EpaPolytope& polytope, const 
     return contact;
 }
 
+inline std::optional<Contact> bestEffortContact(const EpaPolytope& polytope) {
+    auto faceIdx = polytope.closestFaceIndex();
+    if (!faceIdx) {
+        return std::nullopt;
+    }
+    const EpaFace& closest = polytope.faces[*faceIdx];
+    return buildCollisionContactFromFace(polytope, closest, closest.distanceToOrigin);
+}
+
 template <typename ShapeA, typename ShapeB>
-std::expected<Contact, EpaFailure> epa(const ShapeA& shapeA, const ShapeB& shapeB, const Simplex& simplex) {
+std::optional<Contact> epa(const ShapeA& shapeA, const ShapeB& shapeB, const Simplex& simplex) {
     auto polytope = EpaPolytope::create(simplex);
     if (!polytope) {
-        return std::unexpected(EpaFailure::Degenerate);
+        return std::nullopt;
     }
 
     for (int i = 0; i < maxEpaIterations; ++i) {
         if (polytope->faces.size() > maxEpaFaces) {
-            return std::unexpected(EpaFailure::TooManyFaces);
+            return bestEffortContact(*polytope);
         }
 
         auto faceIdx = polytope->closestFaceIndex();
         if (!faceIdx) {
-            return std::unexpected(EpaFailure::Degenerate);
+            return std::nullopt;
         }
 
         const EpaFace&     closest  = polytope->faces[*faceIdx];
@@ -288,11 +290,11 @@ std::expected<Contact, EpaFailure> epa(const ShapeA& shapeA, const ShapeB& shape
         }
 
         if (!polytope->expand(minkowskiDiff, supportA, supportB)) {
-            return std::unexpected(EpaFailure::Degenerate);
+            return bestEffortContact(*polytope);
         }
     }
 
-    return std::unexpected(EpaFailure::MaxIterations);
+    return bestEffortContact(*polytope);
 }
 
 } // namespace vgeo::internal::cpu

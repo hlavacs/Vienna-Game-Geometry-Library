@@ -48,7 +48,7 @@ public:
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
-        dir                                = Terathon::Normalize(dir);
+        dir = (Terathon::SquaredMag(dir) > 1e-12f) ? Terathon::Normalize(dir) : Terathon::Vector3D{1.0f, 0.0f, 0.0f};
         Terathon::Point3D furthestEndpoint = Terathon::Dot(dir, m_a) >= Terathon::Dot(dir, m_b) ? m_a : m_b;
         return furthestEndpoint + m_radius * dir;
     }

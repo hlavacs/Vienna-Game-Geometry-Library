@@ -26,7 +26,7 @@ collide(InstanceHandle handleA, const ShapeA& shapeA, InstanceHandle handleB, co
         return std::nullopt;
     }
 
-    std::expected<Contact, EpaFailure> contact = epa(shapeA, shapeB, simplex);
+    std::optional<Contact> contact = epa(shapeA, shapeB, simplex);
     if (!contact) {
         return std::nullopt;
     }

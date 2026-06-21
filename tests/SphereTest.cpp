@@ -4,6 +4,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cmath>
+
 using namespace vgeo::internal::cpu;
 using Catch::Approx;
 
@@ -42,4 +44,15 @@ TEST_CASE("Sphere support", "[Sphere]") {
 
     auto d = sphere.support({0.0f, -1.0f, 0.0f});
     CHECK(d.y == Approx(-1.0f));
+}
+
+TEST_CASE("Sphere support with zero direction stays finite", "[Sphere]") {
+    // GJK can hand in a zero direction when its Minkowski support point lands on the origin;
+    // Normalize() of a zero vector is undefined and must not be allowed to poison the result with NaN.
+    Sphere sphere{1.0f};
+    auto   p = sphere.support({0.0f, 0.0f, 0.0f});
+
+    CHECK(std::isfinite(p.x));
+    CHECK(std::isfinite(p.y));
+    CHECK(std::isfinite(p.z));
 }

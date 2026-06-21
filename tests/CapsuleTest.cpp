@@ -3,6 +3,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <cmath>
+
 using namespace vgeo::internal::cpu;
 using Catch::Approx;
 
@@ -44,4 +46,15 @@ TEST_CASE("Capsule support perpendicular to axis", "[Capsule]") {
 
     auto a = capsule.support({1.0f, 0.0f, 0.0f});
     CHECK(a.x == Approx(1.0f));
+}
+
+TEST_CASE("Capsule support with zero direction stays finite", "[Capsule]") {
+    // GJK can hand in a zero direction when its Minkowski support point lands on the origin;
+    // Normalize() of a zero vector is undefined and must not be allowed to poison the result with NaN.
+    Capsule capsule{1.0f, 1.0f};
+    auto    p = capsule.support({0.0f, 0.0f, 0.0f});
+
+    CHECK(std::isfinite(p.x));
+    CHECK(std::isfinite(p.y));
+    CHECK(std::isfinite(p.z));
 }
