@@ -69,14 +69,6 @@ public:
         std::unordered_set<CandidatePair> pairs;
 
         for (const auto& [cell, handles] : m_grid) {
-            Cell left{cell.x - 1, cell.y, cell.z};
-            Cell back{cell.x, cell.y - 1, cell.z};
-            Cell up{cell.x, cell.y, cell.z + 1};
-
-            pairWithNeighbor(pairs, left, handles);
-            pairWithNeighbor(pairs, back, handles);
-            pairWithNeighbor(pairs, up, handles);
-
             for (size_t i = 0; i < handles.size(); ++i) {
                 for (size_t j = i + 1; j < handles.size(); ++j) {
                     pairs.emplace(handles[i], handles[j]);
@@ -201,20 +193,6 @@ private:
 
     std::unordered_map<Cell, std::vector<InstanceHandle>> m_grid;        // which handles are in a cell
     std::unordered_map<InstanceHandle, std::vector<Cell>> m_handleCells; // which cells does a handle occupy
-
-    void pairWithNeighbor(std::unordered_set<CandidatePair>& pairs,
-                          const Cell&                        neighborCell,
-                          const std::vector<InstanceHandle>& handles) const {
-        if (m_grid.contains(neighborCell)) {
-            for (const InstanceHandle& handle : handles) {
-                for (const InstanceHandle& neighbor : m_grid.at(neighborCell)) {
-                    if (handle != neighbor) {
-                        pairs.emplace(handle, neighbor);
-                    }
-                }
-            }
-        }
-    }
 };
 
 static_assert(BroadPhase<IndexedGrid>);
