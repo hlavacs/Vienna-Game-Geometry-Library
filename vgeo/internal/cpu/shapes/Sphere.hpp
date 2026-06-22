@@ -20,7 +20,7 @@ class Sphere {
 public:
     Sphere() = default;
 
-    explicit Sphere(real radius) : m_sphere{-1.0f, 0.0f, 0.0f, 0.0f, radius * radius * 0.5f} {}
+    explicit Sphere(real radius) : m_sphere{-1.0, 0.0, 0.0, 0.0, radius * radius * 0.5f} {}
 
     [[nodiscard]] Terathon::Sphere3D getSphere() const {
         return m_sphere;
@@ -46,12 +46,12 @@ public:
         const Terathon::Point3D center = motor.GetPosition();
         Sphere                  result;
         result.m_sphere = Terathon::Sphere3D{
-            -1.0f, center.x, center.y, center.z, -(Terathon::SquaredMag(center) - radius * radius) * 0.5f};
+            -1.0, center.x, center.y, center.z, -(Terathon::SquaredMag(center) - radius * radius) * 0.5f};
         return result;
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
-        dir = (Terathon::SquaredMag(dir) > 1e-12f) ? Terathon::Normalize(dir) : Terathon::Vector3D{1.0f, 0.0f, 0.0f};
+        dir = (Terathon::SquaredMag(dir) > 1e-12) ? Terathon::Normalize(dir) : Terathon::Vector3D{1.0, 0.0, 0.0};
         const real radius = getRadius();
         return {m_sphere.x + radius * dir.x, m_sphere.y + radius * dir.y, m_sphere.z + radius * dir.z};
     }
@@ -61,7 +61,7 @@ public:
         const Terathon::Line3D   ray    = Terathon::Wedge(origin, dir);
         const Terathon::Dipole3D dipole = Terathon::Unitize(Terathon::Antiwedge(m_sphere, ray));
 
-        if (Terathon::SquaredRadiusNorm(dipole) < 0.0f) {
+        if (Terathon::SquaredRadiusNorm(dipole) < 0.0) {
             return std::nullopt;
         }
 
@@ -72,7 +72,7 @@ public:
         const real tCenter = Terathon::Dot(dipoleCenter - origin, dir);
         const real tHit    = tCenter - radius;
 
-        if (tHit < 0.0f) {
+        if (tHit < 0.0) {
             return std::nullopt;
         }
 

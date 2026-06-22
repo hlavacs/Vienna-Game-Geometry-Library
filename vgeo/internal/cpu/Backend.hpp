@@ -138,12 +138,12 @@ public:
             for (int row = 0; row < 3; ++row) {
                 result.m[col][row] = transform(row, col) * scale;
             }
-            result.m[col][3] = 0.0f;
+            result.m[col][3] = 0.0;
         }
         result.m[3][0] = transform(0, 3);
         result.m[3][1] = transform(1, 3);
         result.m[3][2] = transform(2, 3);
-        result.m[3][3] = 1.0f;
+        result.m[3][3] = 1.0;
         return result;
     }
 
@@ -300,10 +300,10 @@ private:
         std::optional<Contact> contact;
     };
 
-    ShapePool<AaBox, ShapeType::AaBox>           m_aaBoxes;
-    ShapePool<Capsule, ShapeType::Capsule>       m_capsules;
-    ShapePool<Polytope, ShapeType::Polytope>     m_polytopes;
-    ShapePool<Sphere, ShapeType::Sphere>         m_spheres;
+    ShapePool<AaBox, ShapeType::AaBox>       m_aaBoxes;
+    ShapePool<Capsule, ShapeType::Capsule>   m_capsules;
+    ShapePool<Polytope, ShapeType::Polytope> m_polytopes;
+    ShapePool<Sphere, ShapeType::Sphere>     m_spheres;
 
     InstancePool<ShapeInstance>                                 m_instances;
     std::optional<vgeo::internal::gpu::VulkanHandler>           m_vulkanHandler;

@@ -30,9 +30,9 @@ inline void addBoundaryEdge(std::vector<DirectedEdge>& boundary, uint32_t a, uin
 }
 
 inline real calculateRelativeEpsilon(std::span<const Terathon::Point3D> points) {
-    real maxX = 0.0f;
-    real maxY = 0.0f;
-    real maxZ = 0.0f;
+    real maxX = 0.0;
+    real maxY = 0.0;
+    real maxZ = 0.0;
     for (const Terathon::Point3D& p : points) {
         maxX = std::max(maxX, std::abs(p.x));
         maxY = std::max(maxY, std::abs(p.y));
@@ -41,7 +41,7 @@ inline real calculateRelativeEpsilon(std::span<const Terathon::Point3D> points) 
 
     // epsilon = 3 * (max|x| + max|y| + max|z|) * FLT_EPSILON
     // (Dirk Gregorius, Implementing QuickHull, GDC 2014)
-    return 3.0f * (maxX + maxY + maxZ) * std::numeric_limits<real>::epsilon();
+    return 3.0 * (maxX + maxY + maxZ) * std::numeric_limits<real>::epsilon();
 }
 
 inline constexpr uint32_t invalidIndex = std::numeric_limits<uint32_t>::max();

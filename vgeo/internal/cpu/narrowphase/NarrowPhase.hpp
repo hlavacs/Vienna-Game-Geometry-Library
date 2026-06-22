@@ -48,19 +48,19 @@ collide(InstanceHandle handleA, const Capsule& capsuleA, InstanceHandle handleB,
     real              s, t;
     Terathon::Point3D closestA, closestB;
 
-    if (lenASq <= 1e-6f && lenBSq <= 1e-6f) {
-        s        = 0.0f;
-        t        = 0.0f;
+    if (lenASq <= 1e-6 && lenBSq <= 1e-6) {
+        s        = 0.0;
+        t        = 0.0;
         closestA = a1;
         closestB = b1;
-    } else if (lenASq <= 1e-6f) {
-        s        = 0.0f;
+    } else if (lenASq <= 1e-6) {
+        s        = 0.0;
         t        = std::clamp(Terathon::Dot(a1 - b1, d2) / lenBSq, real(0.0), real(1.0));
         closestA = a1;
         closestB = b1 + t * d2;
-    } else if (lenBSq <= 1e-6f) {
+    } else if (lenBSq <= 1e-6) {
         const real c = Terathon::Dot(d1, a1 - b1);
-        t            = 0.0f;
+        t            = 0.0;
         s            = std::clamp(-c / lenASq, real(0.0), real(1.0));
         closestA     = a1 + s * d1;
         closestB     = b1;
@@ -70,14 +70,14 @@ collide(InstanceHandle handleA, const Capsule& capsuleA, InstanceHandle handleB,
         const real f     = Terathon::Dot(d2, a1 - b1);
         const real denom = lenASq * lenBSq - b * b;
 
-        s = (denom != 0.0f) ? std::clamp((b * f - c * lenBSq) / denom, real(0.0), real(1.0)) : 0.0f;
+        s = (denom != 0.0) ? std::clamp((b * f - c * lenBSq) / denom, real(0.0), real(1.0)) : 0.0;
         t = (b * s + f) / lenBSq;
 
-        if (t < 0.0f) {
-            t = 0.0f;
+        if (t < 0.0) {
+            t = 0.0;
             s = std::clamp(-c / lenASq, real(0.0), real(1.0));
-        } else if (t > 1.0f) {
-            t = 1.0f;
+        } else if (t > 1.0) {
+            t = 1.0;
             s = std::clamp((b - c) / lenASq, real(0.0), real(1.0));
         }
 
@@ -96,11 +96,11 @@ collide(InstanceHandle handleA, const Capsule& capsuleA, InstanceHandle handleB,
     const real dist  = std::sqrt(distSq);
     const real depth = rSum - dist;
 
-    if (depth <= 0.0f) {
+    if (depth <= 0.0) {
         return std::nullopt;
     }
 
-    const Terathon::Vector3D normal   = (dist > 1e-6f) ? delta / dist : Terathon::Vector3D{0.0f, 1.0f, 0.0f};
+    const Terathon::Vector3D normal   = (dist > 1e-6) ? delta / dist : Terathon::Vector3D{0.0, 1.0, 0.0};
     const Terathon::Point3D  witnessA = closestA - normal * capsuleA.getRadius();
     const Terathon::Point3D  witnessB = closestB + normal * capsuleB.getRadius();
 
@@ -138,11 +138,11 @@ collide(InstanceHandle handleA, const Capsule& capsule, InstanceHandle handleB, 
     const real dist  = std::sqrt(distSq);
     const real depth = rSum - dist;
 
-    if (depth <= 0.0f) {
+    if (depth <= 0.0) {
         return std::nullopt;
     }
 
-    const Terathon::Vector3D normal   = (dist > 1e-6f) ? delta / dist : Terathon::Vector3D{0.0f, 1.0f, 0.0f};
+    const Terathon::Vector3D normal   = (dist > 1e-6) ? delta / dist : Terathon::Vector3D{0.0, 1.0, 0.0};
     const Terathon::Point3D  witnessA = center - normal * radius;
     const Terathon::Point3D  witnessB = closest + normal * capsule.getRadius();
 
@@ -160,7 +160,7 @@ collide(InstanceHandle handleA, const Sphere& sphereA, InstanceHandle handleB, c
     const Terathon::Sphere3D s2                 = Terathon::Unitize(sphereB.getSphere());
     const Terathon::Circle3D intersectionCircle = Terathon::Antiwedge(s1, s2);
 
-    if (Terathon::SquaredRadiusNorm(intersectionCircle) < 0.0f) {
+    if (Terathon::SquaredRadiusNorm(intersectionCircle) < 0.0) {
         return std::nullopt;
     }
 
@@ -175,11 +175,11 @@ collide(InstanceHandle handleA, const Sphere& sphereA, InstanceHandle handleB, c
     const real               dist  = Terathon::Magnitude(delta);
     const real               depth = (radius1 + radius2) - dist;
 
-    if (depth <= 0.0f) {
+    if (depth <= 0.0) {
         return std::nullopt;
     }
 
-    const Terathon::Vector3D normal   = (dist > 1e-6f) ? delta / dist : Terathon::Vector3D{1.0f, 0.0f, 0.0f};
+    const Terathon::Vector3D normal   = (dist > 1e-6) ? delta / dist : Terathon::Vector3D{1.0, 0.0, 0.0};
     const Terathon::Point3D  witnessA = center1 - normal * radius1;
     const Terathon::Point3D  witnessB = center2 + normal * radius2;
 

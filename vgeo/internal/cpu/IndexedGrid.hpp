@@ -94,7 +94,7 @@ public:
         const real gridMaxY = (m_boundsMax.y + 1) * m_cellSize;
         const real gridMaxZ = (m_boundsMax.z + 1) * m_cellSize;
 
-        real tEntry = 0.0f;
+        real tEntry = 0.0;
         real tExit  = std::numeric_limits<real>::max();
 
         for (int axis = 0; axis < 3; ++axis) {
@@ -103,7 +103,7 @@ public:
             const real slabMin    = axis == 0 ? gridMinX : axis == 1 ? gridMinY : gridMinZ;
             const real slabMax    = axis == 0 ? gridMaxX : axis == 1 ? gridMaxY : gridMaxZ;
 
-            if (std::abs(dirAxis) < 1e-6f) {
+            if (std::abs(dirAxis) < 1e-6) {
                 if (originAxis < slabMin || originAxis > slabMax) {
                     return hits;
                 }
@@ -129,7 +129,7 @@ public:
                                          origin.y >= gridMaxY || origin.z < gridMinZ || origin.z >= gridMaxZ;
 
         if (isOriginOutsideGrid) {
-            constexpr real eps = 1e-6f;
+            constexpr real eps = 1e-6;
             origin.x += dir.x * (tEntry + eps);
             origin.y += dir.y * (tEntry + eps);
             origin.z += dir.z * (tEntry + eps);
@@ -143,16 +143,16 @@ public:
         const int stepY = dir.y > 0 ? 1 : dir.y < 0 ? -1 : 0;
         const int stepZ = dir.z > 0 ? 1 : dir.z < 0 ? -1 : 0;
 
-        const real tDeltaX = std::abs(dir.x) > 1e-6f ? std::abs(m_cellSize / dir.x) : std::numeric_limits<real>::max();
-        const real tDeltaY = std::abs(dir.y) > 1e-6f ? std::abs(m_cellSize / dir.y) : std::numeric_limits<real>::max();
-        const real tDeltaZ = std::abs(dir.z) > 1e-6f ? std::abs(m_cellSize / dir.z) : std::numeric_limits<real>::max();
+        const real tDeltaX = std::abs(dir.x) > 1e-6 ? std::abs(m_cellSize / dir.x) : std::numeric_limits<real>::max();
+        const real tDeltaY = std::abs(dir.y) > 1e-6 ? std::abs(m_cellSize / dir.y) : std::numeric_limits<real>::max();
+        const real tDeltaZ = std::abs(dir.z) > 1e-6 ? std::abs(m_cellSize / dir.z) : std::numeric_limits<real>::max();
 
-        real tMaxX = std::abs(dir.x) > 1e-6f ? ((originCellX + (stepX > 0 ? 1 : 0)) * m_cellSize - origin.x) / dir.x
-                                             : std::numeric_limits<real>::max();
-        real tMaxY = std::abs(dir.y) > 1e-6f ? ((originCellY + (stepY > 0 ? 1 : 0)) * m_cellSize - origin.y) / dir.y
-                                             : std::numeric_limits<real>::max();
-        real tMaxZ = std::abs(dir.z) > 1e-6f ? ((originCellZ + (stepZ > 0 ? 1 : 0)) * m_cellSize - origin.z) / dir.z
-                                             : std::numeric_limits<real>::max();
+        real tMaxX = std::abs(dir.x) > 1e-6 ? ((originCellX + (stepX > 0 ? 1 : 0)) * m_cellSize - origin.x) / dir.x
+                                            : std::numeric_limits<real>::max();
+        real tMaxY = std::abs(dir.y) > 1e-6 ? ((originCellY + (stepY > 0 ? 1 : 0)) * m_cellSize - origin.y) / dir.y
+                                            : std::numeric_limits<real>::max();
+        real tMaxZ = std::abs(dir.z) > 1e-6 ? ((originCellZ + (stepZ > 0 ? 1 : 0)) * m_cellSize - origin.z) / dir.z
+                                            : std::numeric_limits<real>::max();
 
         int currentX = originCellX;
         int currentY = originCellY;

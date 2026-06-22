@@ -46,13 +46,12 @@ public:
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
         dir = Terathon::Normalize(dir);
-        return {
-            dir.x >= 0.0f ? m_max.x : m_min.x, dir.y >= 0.0f ? m_max.y : m_min.y, dir.z >= 0.0f ? m_max.z : m_min.z};
+        return {dir.x >= 0.0 ? m_max.x : m_min.x, dir.y >= 0.0 ? m_max.y : m_min.y, dir.z >= 0.0 ? m_max.z : m_min.z};
     }
 
     [[nodiscard]] std::optional<RayHit>
     intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
-        real tEntry  = 0.0f;
+        real tEntry  = 0.0;
         real tExit   = std::numeric_limits<real>::max();
         int  hitAxis = 0;
 
@@ -62,7 +61,7 @@ public:
             const real slabMin    = axis == 0 ? m_min.x : axis == 1 ? m_min.y : m_min.z;
             const real slabMax    = axis == 0 ? m_max.x : axis == 1 ? m_max.y : m_max.z;
 
-            if (std::abs(dirAxis) < 1e-6f) {
+            if (std::abs(dirAxis) < 1e-6) {
                 if (originAxis < slabMin || originAxis > slabMax) {
                     return std::nullopt;
                 }
@@ -87,22 +86,22 @@ public:
             }
         }
 
-        if (tEntry < 0.0f) {
+        if (tEntry < 0.0) {
             return std::nullopt;
         }
 
         const Terathon::Point3D position = origin + dir * tEntry;
 
-        Terathon::Vector3D normal{0.0f, 0.0f, 0.0f};
+        Terathon::Vector3D normal{0.0, 0.0, 0.0};
         switch (hitAxis) {
             case 0:
-                normal.x = dir.x > 0.0f ? -1.0f : 1.0f;
+                normal.x = dir.x > 0.0 ? -1.0 : 1.0;
                 break;
             case 1:
-                normal.y = dir.y > 0.0f ? -1.0f : 1.0f;
+                normal.y = dir.y > 0.0 ? -1.0 : 1.0;
                 break;
             case 2:
-                normal.z = dir.z > 0.0f ? -1.0f : 1.0f;
+                normal.z = dir.z > 0.0 ? -1.0 : 1.0;
                 break;
         }
 

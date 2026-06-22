@@ -15,21 +15,20 @@ namespace vgeo::internal::cpu {
 inline constexpr int maxGjkIterations = 64;
 
 inline bool isSameDirection(const Terathon::Vector3D& a, const Terathon::Vector3D& b) {
-    return Terathon::Dot(a, b) > 0.0f;
+    return Terathon::Dot(a, b) > 0.0;
 }
 
 inline Terathon::Vector3D arbitraryPerpendicular(const Terathon::Vector3D& v) {
-    const Terathon::Vector3D axis = (std::abs(v.x) < std::abs(v.y))
-                                        ? ((std::abs(v.x) < std::abs(v.z)) ? Terathon::Vector3D{1.0f, 0.0f, 0.0f}
-                                                                           : Terathon::Vector3D{0.0f, 0.0f, 1.0f})
-                                        : ((std::abs(v.y) < std::abs(v.z)) ? Terathon::Vector3D{0.0f, 1.0f, 0.0f}
-                                                                           : Terathon::Vector3D{0.0f, 0.0f, 1.0f});
+    const Terathon::Vector3D axis =
+        (std::abs(v.x) < std::abs(v.y))
+            ? ((std::abs(v.x) < std::abs(v.z)) ? Terathon::Vector3D{1.0, 0.0, 0.0} : Terathon::Vector3D{0.0, 0.0, 1.0})
+            : ((std::abs(v.y) < std::abs(v.z)) ? Terathon::Vector3D{0.0, 1.0, 0.0} : Terathon::Vector3D{0.0, 0.0, 1.0});
     return Terathon::Cross(v, axis);
 }
 
 inline Terathon::Vector3D perpendicularTowards(const Terathon::Vector3D& edge, const Terathon::Vector3D& towards) {
     const Terathon::Vector3D dir = Terathon::Cross(Terathon::Cross(edge, towards), edge);
-    return (Terathon::SquaredMag(dir) > 1e-12f) ? dir : arbitraryPerpendicular(edge);
+    return (Terathon::SquaredMag(dir) > 1e-12) ? dir : arbitraryPerpendicular(edge);
 }
 
 template <typename ShapeA, typename ShapeB>
@@ -111,7 +110,7 @@ struct Simplex {
         } else {
             // flip winding so normal points toward origin
             set({points[0], points[2], points[1]});
-            dir = (Terathon::SquaredMag(abc) > 1e-12f) ? -abc : arbitraryPerpendicular(ab);
+            dir = (Terathon::SquaredMag(abc) > 1e-12) ? -abc : arbitraryPerpendicular(ab);
         }
 
         return false;
@@ -163,8 +162,8 @@ struct Simplex {
 template <typename ShapeA, typename ShapeB>
 bool gjk(const ShapeA& shapeA, const ShapeB& shapeB, Simplex& simplex) {
     Terathon::Vector3D dir = shapeB.centroid() - shapeA.centroid();
-    if (Terathon::Dot(dir, dir) <= 0.0f) {
-        dir = {1.0f, 0.0f, 0.0f};
+    if (Terathon::Dot(dir, dir) <= 0.0) {
+        dir = {1.0, 0.0, 0.0};
     }
 
     auto               supportA = shapeA.support(dir);
@@ -178,7 +177,7 @@ bool gjk(const ShapeA& shapeA, const ShapeB& shapeB, Simplex& simplex) {
         supportB                        = shapeB.support(-dir);
         Terathon::Vector3D supportPoint = minkowskiSupport(shapeA, shapeB, dir);
 
-        if (Terathon::Dot(supportPoint, dir) <= 0.0f) {
+        if (Terathon::Dot(supportPoint, dir) <= 0.0) {
             return false;
         }
 

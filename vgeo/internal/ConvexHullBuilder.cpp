@@ -71,7 +71,7 @@ std::array<uint32_t, 6> findExtremePoints(std::span<const Terathon::Point3D> poi
 std::pair<uint32_t, uint32_t> findMostDistantPair(std::span<const Terathon::Point3D> points) {
     const std::array<uint32_t, 6> extremePoints = findExtremePoints(points);
     uint32_t                      a = invalidIndex, b = invalidIndex;
-    real                          maxDistSq = 0.0f;
+    real                          maxDistSq = 0.0;
     for (uint32_t i = 0; i < 6; ++i) {
         for (uint32_t j = i + 1; j < 6; ++j) {
             const real distSq =
@@ -91,7 +91,7 @@ uint32_t findFurthestFromLine(std::span<const Terathon::Point3D> points, uint32_
         Terathon::Unitize(Terathon::Wedge(Terathon::Point3D{points[a].x, points[a].y, points[a].z},
                                           Terathon::Point3D{points[b].x, points[b].y, points[b].z}));
     uint32_t c         = invalidIndex;
-    real     maxDistSq = 0.0f;
+    real     maxDistSq = 0.0;
     for (uint32_t i = 0; i < points.size(); ++i) {
         if (i == a || i == b) {
             continue;
@@ -110,7 +110,7 @@ uint32_t findFurthestFromLine(std::span<const Terathon::Point3D> points, uint32_
 uint32_t findFurthestFromPlane(std::span<const Terathon::Point3D> points, uint32_t a, uint32_t b, uint32_t c) {
     Terathon::Plane3D plane     = Terathon::Unitize(Terathon::Plane3D{points[a], points[b], points[c]});
     uint32_t          d         = invalidIndex;
-    real              maxDistSq = 0.0f;
+    real              maxDistSq = 0.0;
     for (uint32_t i = 0; i < points.size(); ++i) {
         if (i == a || i == b || i == c) {
             continue;
@@ -129,7 +129,7 @@ HullMesh buildInitialTetrahedron(std::span<const Terathon::Point3D> points) {
     uint32_t c  = findFurthestFromLine(points, a, b);
     uint32_t d  = findFurthestFromPlane(points, a, b, c);
 
-    if (Terathon::Antiwedge(points[d], Terathon::Unitize(Terathon::Plane3D{points[a], points[b], points[c]})) > 0.0f) {
+    if (Terathon::Antiwedge(points[d], Terathon::Unitize(Terathon::Plane3D{points[a], points[b], points[c]})) > 0.0) {
         std::swap(b, c);
     }
 
@@ -194,7 +194,7 @@ uint32_t findActiveFace(const HullMesh& mesh) {
 
 uint32_t findFurthestInSet(const Face& face, std::span<const Terathon::Point3D> points) {
     uint32_t eyeIndex = invalidIndex;
-    real     maxDist  = 0.0f;
+    real     maxDist  = 0.0;
     for (uint32_t index : face.outsideSet) {
         real dist = Terathon::Antiwedge(points[index], face.plane);
         if (dist > maxDist) {

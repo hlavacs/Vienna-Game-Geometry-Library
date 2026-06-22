@@ -152,9 +152,9 @@ private:
 
         int axis = (spreadX > spreadY && spreadX > spreadZ) ? 0 : (spreadY > spreadZ) ? 1 : 2;
 
-        real midpoint = (axis == 0)   ? (min.x + max.x) * 0.5f
-                        : (axis == 1) ? (min.y + max.y) * 0.5f
-                                      : (min.z + max.z) * 0.5f;
+        real midpoint = (axis == 0)   ? (min.x + max.x) * 0.5
+                        : (axis == 1) ? (min.y + max.y) * 0.5
+                                      : (min.z + max.z) * 0.5;
 
         auto splitPoint = std::partition(m_indices.begin() + begin, m_indices.begin() + end, [&](uint32_t index) {
             auto centroid = m_shapeEntries[index].bv.centroid();

@@ -21,7 +21,7 @@
 namespace vgeo::internal::cpu {
 
 inline constexpr int    maxEpaIterations = 64;
-inline constexpr real   epaTolerance     = 1e-6f;
+inline constexpr real   epaTolerance     = 1e-6;
 inline constexpr size_t maxEpaFaces      = 2048;
 
 struct EpaFace {
@@ -38,14 +38,14 @@ makeFace(std::span<const Terathon::Point3D> vertices, uint32_t a, uint32_t b, ui
     Terathon::Vector3D ac     = vertices[c] - vertices[a];
     Terathon::Vector3D normal = Terathon::Cross(ab, ac);
 
-    if (Terathon::SquaredMag(normal) <= 0.0f) {
+    if (Terathon::SquaredMag(normal) <= 0.0) {
         return std::nullopt;
     }
 
     normal        = Terathon::Normalize(normal);
     real distance = Terathon::Dot(normal, vertices[a]);
 
-    if (distance < 0.0f) {
+    if (distance < 0.0) {
         std::swap(b, c);
         normal   = -normal;
         distance = -distance;
@@ -187,33 +187,33 @@ closestPointBarycentrics(const Terathon::Point3D& a, const Terathon::Point3D& b,
     real ao_ac = Terathon::Dot(ao, ac);
 
     real denominator = ab_ab * ac_ac - ab_ac * ab_ac;
-    if (std::abs(denominator) < 1e-6f) {
-        return {1.0f, 0.0f, 0.0f};
+    if (std::abs(denominator) < 1e-6) {
+        return {1.0, 0.0, 0.0};
     }
 
     real v = (ac_ac * ao_ab - ab_ac * ao_ac) / denominator;
     real w = (ab_ab * ao_ac - ab_ac * ao_ab) / denominator;
-    real u = 1.0f - v - w;
+    real u = 1.0 - v - w;
 
-    if (u < 0.0f) {
-        u = 0.0f;
+    if (u < 0.0) {
+        u = 0.0;
     }
-    if (v < 0.0f) {
-        v = 0.0f;
+    if (v < 0.0) {
+        v = 0.0;
     }
-    if (w < 0.0f) {
-        w = 0.0f;
+    if (w < 0.0) {
+        w = 0.0;
     }
 
     real sum = u + v + w;
-    if (sum > 0.0f) {
+    if (sum > 0.0) {
         u /= sum;
         v /= sum;
         w /= sum;
     } else {
-        u = 1.0f;
-        v = 0.0f;
-        w = 0.0f;
+        u = 1.0;
+        v = 0.0;
+        w = 0.0;
     }
 
     return {u, v, w};

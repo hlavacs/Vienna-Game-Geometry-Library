@@ -39,11 +39,11 @@ public:
     [[nodiscard]] Bv computeBv() const;
 
     [[nodiscard]] Terathon::Point3D centroid() const {
-        Terathon::Vector3D sum{0.0f, 0.0f, 0.0f};
+        Terathon::Vector3D sum{0.0, 0.0, 0.0};
         for (const Terathon::Point3D& vertex : m_vertices) {
             sum += vertex;
         }
-        real invCount = 1.0f / static_cast<real>(m_vertices.size());
+        real invCount = 1.0 / static_cast<real>(m_vertices.size());
         return {sum.x * invCount, sum.y * invCount, sum.z * invCount};
     }
 
@@ -84,28 +84,28 @@ public:
             const Terathon::Vector3D h           = Terathon::Cross(dir, e2);
             const real               determinant = Terathon::Dot(e1, h);
 
-            if (determinant < 1e-6f) {
+            if (determinant < 1e-6) {
                 continue;
             }
 
-            const real               f = 1.0f / determinant;
+            const real               f = 1.0 / determinant;
             const Terathon::Vector3D s = origin - v0;
             const real               u = f * Terathon::Dot(s, h);
 
-            if (u < 0.0f || u > 1.0f) {
+            if (u < 0.0 || u > 1.0) {
                 continue;
             }
 
             const Terathon::Vector3D q = Terathon::Cross(s, e1);
             const real               v = f * Terathon::Dot(dir, q);
 
-            if (v < 0.0f || u + v > 1.0f) {
+            if (v < 0.0 || u + v > 1.0) {
                 continue;
             }
 
             const real t = f * Terathon::Dot(e2, q);
 
-            if (t < 0.0f || t >= tNearest) {
+            if (t < 0.0 || t >= tNearest) {
                 continue;
             }
 

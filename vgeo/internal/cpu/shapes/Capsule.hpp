@@ -17,8 +17,7 @@ class Capsule {
 public:
     Capsule() = default;
 
-    Capsule(real halfLength, real radius)
-        : m_a{0.0f, -halfLength, 0.0f}, m_b{0.0f, halfLength, 0.0f}, m_radius{radius} {}
+    Capsule(real halfLength, real radius) : m_a{0.0, -halfLength, 0.0}, m_b{0.0, halfLength, 0.0}, m_radius{radius} {}
 
     [[nodiscard]] Terathon::Point3D getA() const {
         return m_a;
@@ -48,8 +47,13 @@ public:
     }
 
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
-        dir = (Terathon::SquaredMag(dir) > 1e-12f) ? Terathon::Normalize(dir) : Terathon::Vector3D{1.0f, 0.0f, 0.0f};
-        Terathon::Point3D furthestEndpoint = Terathon::Dot(dir, m_a) >= Terathon::Dot(dir, m_b) ? m_a : m_b;
+        dir = (Terathon::SquaredMag(dir) > 1e-12) ? Terathon::Normalize(dir) : Terathon::Vector3D{1.0, 0.0, 0.0};
+        Terathon::Point3D furthestEndpoint;
+        if (Terathon::Dot(dir, m_a) >= Terathon::Dot(dir, m_b)) {
+            furthestEndpoint = m_a;
+        } else {
+            furthestEndpoint = m_b;
+        }
         return furthestEndpoint + m_radius * dir;
     }
 
@@ -118,20 +122,20 @@ private:
         const Terathon::Vector3D d            = Terathon::Reject(dir, axisDir);
         const Terathon::Vector3D f            = Terathon::Reject(oc, axisDir);
         const real               a            = Terathon::Dot(d, d);
-        const real               b            = 2.0f * Terathon::Dot(d, f);
+        const real               b            = 2.0 * Terathon::Dot(d, f);
         const real               c            = Terathon::Dot(f, f) - m_radius * m_radius;
-        const real               discriminant = b * b - 4.0f * a * c;
+        const real               discriminant = b * b - 4.0 * a * c;
 
-        if (discriminant < 0.0f || a <= 1e-6f) {
+        if (discriminant < 0.0 || a <= 1e-6) {
             return std::nullopt;
         }
 
         const real sqrtDiscriminant = std::sqrt(discriminant);
-        const real t0               = (-b - sqrtDiscriminant) / (2.0f * a);
-        const real t1               = (-b + sqrtDiscriminant) / (2.0f * a);
-        const real t                = t0 >= 0.0f ? t0 : t1;
+        const real t0               = (-b - sqrtDiscriminant) / (2.0 * a);
+        const real t1               = (-b + sqrtDiscriminant) / (2.0 * a);
+        const real t                = t0 >= 0.0 ? t0 : t1;
 
-        if (t < 0.0f) {
+        if (t < 0.0) {
             return std::nullopt;
         }
 
@@ -139,7 +143,7 @@ private:
         const Terathon::Vector3D toHit = hit - m_a;
         const real               proj  = Terathon::Dot(toHit, axisDir);
 
-        if (proj < 0.0f || proj > axisLen) {
+        if (proj < 0.0 || proj > axisLen) {
             return std::nullopt;
         }
 
@@ -152,27 +156,27 @@ private:
                                                    Terathon::Vector3D hemisphereDir) const {
         const Terathon::Vector3D oc   = origin - capCenter;
         const real               a    = Terathon::Dot(dir, dir);
-        const real               b    = 2.0f * Terathon::Dot(dir, oc);
+        const real               b    = 2.0 * Terathon::Dot(dir, oc);
         const real               c    = Terathon::Dot(oc, oc) - m_radius * m_radius;
-        const real               disc = b * b - 4.0f * a * c;
+        const real               disc = b * b - 4.0 * a * c;
 
-        if (disc < 0.0f) {
+        if (disc < 0.0) {
             return std::nullopt;
         }
 
         const real sqrtDisc = std::sqrt(disc);
-        const real t0       = (-b - sqrtDisc) / (2.0f * a);
-        const real t1       = (-b + sqrtDisc) / (2.0f * a);
-        const real t        = t0 >= 0.0f ? t0 : t1;
+        const real t0       = (-b - sqrtDisc) / (2.0 * a);
+        const real t1       = (-b + sqrtDisc) / (2.0 * a);
+        const real t        = t0 >= 0.0 ? t0 : t1;
 
-        if (t < 0.0f) {
+        if (t < 0.0) {
             return std::nullopt;
         }
 
         const Terathon::Point3D  hit    = origin + dir * t;
         const Terathon::Vector3D normal = Terathon::Normalize(hit - capCenter);
 
-        if (Terathon::Dot(normal, hemisphereDir) < 0.0f) {
+        if (Terathon::Dot(normal, hemisphereDir) < 0.0) {
             return std::nullopt;
         }
 
