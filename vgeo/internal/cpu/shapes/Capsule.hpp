@@ -17,7 +17,7 @@ class Capsule {
 public:
     Capsule() = default;
 
-    Capsule(real halfLength, real radius) : m_a{0.0, -halfLength, 0.0}, m_b{0.0, halfLength, 0.0}, m_radius{radius} {}
+    Capsule(real halfLength, real radius) : m_a{0.0, 0.0, -halfLength}, m_b{0.0, 0.0, halfLength}, m_radius{radius} {}
 
     [[nodiscard]] Terathon::Point3D getA() const {
         return m_a;

@@ -2,7 +2,6 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
-
 #include <cmath>
 
 using namespace vgeo::internal::cpu;
@@ -18,27 +17,27 @@ TEST_CASE("Capsule centroid", "[Capsule]") {
 }
 
 TEST_CASE("Capsule computeBv (Aabb)", "[Capsule]") {
-    // Y-aligned: endpoints at {0,-1,0} and {0,1,0}, radius=1
-    // AABB: min={-1,-2,-1}, max={1,2,1}
+    // Z-aligned: endpoints at {0,0,-1} and {0,0,1}, radius=1
+    // AABB: min={-1,-1,-2}, max={1,1,2}
     Capsule capsule{1.0f, 1.0f};
     auto    bv = capsule.computeBv<Aabb>();
 
     CHECK(bv.getMin().x == -1.0f);
-    CHECK(bv.getMin().y == -2.0f);
-    CHECK(bv.getMin().z == -1.0f);
+    CHECK(bv.getMin().y == -1.0f);
+    CHECK(bv.getMin().z == -2.0f);
     CHECK(bv.getMax().x == 1.0f);
-    CHECK(bv.getMax().y == 2.0f);
-    CHECK(bv.getMax().z == 1.0f);
+    CHECK(bv.getMax().y == 1.0f);
+    CHECK(bv.getMax().z == 2.0f);
 }
 
 TEST_CASE("Capsule support along axis", "[Capsule]") {
     Capsule capsule{1.0f, 1.0f};
 
-    auto a = capsule.support({0.0f, 1.0f, 0.0f});
-    CHECK(a.y == Approx(2.0f));
+    auto a = capsule.support({0.0f, 0.0f, 1.0f});
+    CHECK(a.z == Approx(2.0f));
 
-    auto b = capsule.support({0.0f, -1.0f, 0.0f});
-    CHECK(b.y == Approx(-2.0f));
+    auto b = capsule.support({0.0f, 0.0f, -1.0f});
+    CHECK(b.z == Approx(-2.0f));
 }
 
 TEST_CASE("Capsule support perpendicular to axis", "[Capsule]") {
