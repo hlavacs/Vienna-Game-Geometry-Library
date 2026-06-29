@@ -41,11 +41,12 @@ public:
         m_boundsMax.y = std::max(m_boundsMax.y, cellMaxY);
         m_boundsMax.z = std::max(m_boundsMax.z, cellMaxZ);
 
+        std::vector<Cell>& handleCells = m_handleCells[handle];
         for (int x = cellMinX; x <= cellMaxX; ++x) {
             for (int y = cellMinY; y <= cellMaxY; ++y) {
                 for (int z = cellMinZ; z <= cellMaxZ; ++z) {
                     m_grid[Cell{x, y, z}].push_back(handle);
-                    m_handleCells[handle].emplace_back(x, y, z);
+                    handleCells.emplace_back(x, y, z);
                 }
             }
         }
