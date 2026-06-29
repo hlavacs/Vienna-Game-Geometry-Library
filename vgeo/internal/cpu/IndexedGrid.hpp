@@ -53,6 +53,21 @@ public:
     }
 
     void update(InstanceHandle handle, Shape shape) {
+        const Aabb aabb = std::visit([](const auto& shape) { return shape.template computeBv<Aabb>(); }, shape);
+
+        const int cellMinX = static_cast<int>(std::floor(aabb.getMin().x / m_cellSize));
+        const int cellMaxX = static_cast<int>(std::floor(aabb.getMax().x / m_cellSize));
+        const int cellMinY = static_cast<int>(std::floor(aabb.getMin().y / m_cellSize));
+        const int cellMaxY = static_cast<int>(std::floor(aabb.getMax().y / m_cellSize));
+        const int cellMinZ = static_cast<int>(std::floor(aabb.getMin().z / m_cellSize));
+        const int cellMaxZ = static_cast<int>(std::floor(aabb.getMax().z / m_cellSize));
+
+        auto found = m_handleCells.find(handle);
+        if (found != m_handleCells.end() &&
+            occupiesBox(found->second, cellMinX, cellMaxX, cellMinY, cellMaxY, cellMinZ, cellMaxZ)) {
+            return; // shape still in same cells
+        }
+
         remove(handle);
         add(handle, shape);
     }
@@ -194,6 +209,21 @@ private:
 
     std::unordered_map<Cell, std::vector<InstanceHandle>> m_grid;        // which handles are in a cell
     std::unordered_map<InstanceHandle, std::vector<Cell>> m_handleCells; // which cells does a handle occupy
+
+    static bool
+    occupiesBox(const std::vector<Cell>& cells, int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {
+        Cell lo = cells.front();
+        Cell hi = lo;
+        for (const Cell& cell : cells) {
+            lo.x = std::min(lo.x, cell.x);
+            hi.x = std::max(hi.x, cell.x);
+            lo.y = std::min(lo.y, cell.y);
+            hi.y = std::max(hi.y, cell.y);
+            lo.z = std::min(lo.z, cell.z);
+            hi.z = std::max(hi.z, cell.z);
+        }
+        return lo.x == minX && hi.x == maxX && lo.y == minY && hi.y == maxY && lo.z == minZ && hi.z == maxZ;
+    }
 };
 
 static_assert(BroadPhase<IndexedGrid>);
