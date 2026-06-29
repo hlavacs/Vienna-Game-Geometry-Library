@@ -27,8 +27,26 @@ public:
     }
 
     void update(InstanceHandle handle, Shape shape) {
-        remove(handle);
-        add(handle, shape);
+        auto found = m_aabbs.find(handle);
+        if (found == m_aabbs.end()) {
+            add(handle, shape);
+            return;
+        }
+
+        const Aabb aabb = std::visit([](const auto& shape) { return shape.template computeBv<Aabb>(); }, shape);
+        found->second   = aabb;
+
+        int updated = 0;
+        for (Endpoint& endpoint : m_axis) {
+            if (endpoint.handle == handle) {
+                endpoint.value = endpoint.type == EndpointType::Min ? aabb.getMin().x : aabb.getMax().x;
+                if (++updated == 2) {
+                    break;
+                }
+            }
+        }
+
+        m_isDirty = true;
     }
 
     void remove(InstanceHandle handle) {
