@@ -21,8 +21,9 @@ public:
         Aabb aabb = std::visit([](const auto& shape) { return shape.template computeBv<Aabb>(); }, shape);
         m_aabbs.emplace(handle, aabb);
 
-        insertSorted(handle, aabb.getMin().x, EndpointType::Min);
-        insertSorted(handle, aabb.getMax().x, EndpointType::Max);
+        m_axis.emplace_back(handle, aabb.getMin().x, EndpointType::Min);
+        m_axis.emplace_back(handle, aabb.getMax().x, EndpointType::Max);
+        m_isDirty = true;
     }
 
     void update(InstanceHandle handle, Shape shape) {
@@ -36,6 +37,8 @@ public:
     }
 
     std::vector<CandidatePair> findCandidates() const {
+        sortAxisIfDirty();
+
         std::vector<CandidatePair>                   result;
         std::vector<std::pair<InstanceHandle, Aabb>> active;
 
@@ -77,15 +80,19 @@ private:
         EndpointType   type;
     };
 
-    std::vector<Endpoint>                    m_axis;
+    mutable std::vector<Endpoint>            m_axis;
     std::unordered_map<InstanceHandle, Aabb> m_aabbs;
+    mutable bool                             m_isDirty = false;
 
-    void insertSorted(InstanceHandle handle, real value, EndpointType type) {
-        auto it = std::lower_bound(
-            m_axis.begin(), m_axis.end(), Endpoint{handle, value, type}, [](const Endpoint& a, const Endpoint& b) {
-                return a.value != b.value ? a.value < b.value : a.type < b.type;
-            });
-        m_axis.insert(it, Endpoint{handle, value, type});
+    void sortAxisIfDirty() const {
+        if (!m_isDirty) {
+            return;
+        }
+
+        std::sort(m_axis.begin(), m_axis.end(), [](const Endpoint& a, const Endpoint& b) {
+            return a.value != b.value ? a.value < b.value : a.type < b.type;
+        });
+        m_isDirty = false;
     }
 };
 
