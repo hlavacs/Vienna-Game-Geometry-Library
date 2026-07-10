@@ -25,19 +25,22 @@ if(VGEO_DOUBLE_PRECISION)
     target_compile_definitions(TerathonMathLibrary PUBLIC VGEO_DOUBLE_PRECISION)
 endif()
 
-find_package(Vulkan REQUIRED)
-
+option(VGEO_WITH_VULKAN "Enable the Vulkan-based GPU backend (requires the Vulkan SDK)" OFF)
 
 # Library
 add_library(vgeo STATIC
     vgeo/internal/ConvexHullBuilder.cpp
-    vgeo/internal/gpu/VulkanHandler.cpp
 )
 target_compile_features(vgeo PUBLIC cxx_std_26)
 target_include_directories(vgeo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(vgeo PUBLIC TerathonMathLibrary)
 
-target_link_libraries(vgeo PUBLIC Vulkan::Vulkan)
+if(VGEO_WITH_VULKAN)
+    find_package(Vulkan REQUIRED)
+    target_sources(vgeo PRIVATE vgeo/internal/gpu/VulkanHandler.cpp)
+    target_compile_definitions(vgeo PUBLIC VGEO_WITH_VULKAN)
+    target_link_libraries(vgeo PUBLIC Vulkan::Vulkan)
+endif()
 
 # Examples and tests
 if(PROJECT_IS_TOP_LEVEL)

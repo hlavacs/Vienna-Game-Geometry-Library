@@ -14,7 +14,9 @@
 #include <optional>
 #include <span>
 
+#ifdef VGEO_WITH_VULKAN
 struct VkPhysicalDevice_T;
+#endif
 
 namespace vgeo {
 
@@ -26,7 +28,9 @@ public:
     template <typename... Args>
     explicit CollisionSystem(Args&&... args) : m_backend(std::forward<Args>(args)...) {}
 
+#ifdef VGEO_WITH_VULKAN
     explicit CollisionSystem(VkPhysicalDevice_T* physicalDevice) : m_backend(physicalDevice) {}
+#endif
 
     // Geometry
 

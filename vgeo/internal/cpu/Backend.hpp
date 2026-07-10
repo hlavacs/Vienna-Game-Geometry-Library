@@ -17,7 +17,9 @@
 #include "vgeo/internal/cpu/ShapeInstance.hpp"
 #include "vgeo/internal/cpu/ShapePool.hpp"
 #include "vgeo/internal/cpu/narrowphase/NarrowPhase.hpp"
+#ifdef VGEO_WITH_VULKAN
 #include "vgeo/internal/gpu/VulkanHandler.hpp"
+#endif
 
 #include <TSMatrix4D.h>
 
@@ -29,7 +31,9 @@
 #include <variant>
 #include <vector>
 
+#ifdef VGEO_WITH_VULKAN
 struct VkPhysicalDevice_T;
+#endif
 
 namespace vgeo::internal::cpu {
 
@@ -41,7 +45,9 @@ public:
     template <typename... Args>
     explicit Backend(Args&&... args) : m_broadphase(std::forward<Args>(args)...) {}
 
+#ifdef VGEO_WITH_VULKAN
     explicit Backend(VkPhysicalDevice_T* physicalDevice) : m_vulkanHandler(std::in_place, physicalDevice) {}
+#endif
 
     // Geometry
 
@@ -306,11 +312,14 @@ private:
     ShapePool<Sphere, ShapeType::Sphere>     m_spheres;
 
     InstancePool<ShapeInstance>                                 m_instances;
-    std::optional<vgeo::internal::gpu::VulkanHandler>           m_vulkanHandler;
     Bp                                                          m_broadphase;
     mutable std::unordered_map<CandidatePair, CachedPairResult> m_pairCache;
     mutable std::unordered_set<InstanceHandle>                  m_dirtyInstances;
     mutable bool                                                m_pairCacheNeedsPrune{false};
+
+#ifdef VGEO_WITH_VULKAN
+    std::optional<vgeo::internal::gpu::VulkanHandler> m_vulkanHandler;
+#endif
 };
 
 } // namespace vgeo::internal::cpu
