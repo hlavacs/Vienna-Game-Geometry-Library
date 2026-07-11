@@ -21,7 +21,7 @@ struct CollisionPair {
     Contact        contact;
 };
 
-struct CollisionResults {
+struct CollisionResult {
     std::vector<CollisionPair> pairs;
 };
 

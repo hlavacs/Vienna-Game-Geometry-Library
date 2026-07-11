@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/CollisionResults.hpp"           // IWYU pragma: export
+#include "vgeo/CollisionResult.hpp"            // IWYU pragma: export
 #include "vgeo/CollisionSystem.hpp"            // IWYU pragma: export
 #include "vgeo/GeometryHandle.hpp"             // IWYU pragma: export
 #include "vgeo/InstanceHandle.hpp"             // IWYU pragma: export

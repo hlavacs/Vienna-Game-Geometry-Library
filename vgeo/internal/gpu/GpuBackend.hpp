@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/CollisionResults.hpp"
+#include "vgeo/CollisionResult.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/RayResult.hpp"
 #include "vgeo/Vec3.hpp"

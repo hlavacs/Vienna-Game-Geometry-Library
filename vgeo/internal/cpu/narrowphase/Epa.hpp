@@ -3,7 +3,7 @@
 // EPA collision response
 // https://winter.dev/articles/epa-algorithm/
 
-#include "vgeo/CollisionResults.hpp"
+#include "vgeo/CollisionResult.hpp"
 #include "vgeo/Real.hpp"
 #include "vgeo/internal/PolytopeUtils.hpp"
 #include "vgeo/internal/cpu/narrowphase/Gjk.hpp"

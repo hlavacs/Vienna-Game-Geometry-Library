@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/CollisionResults.hpp"
+#include "vgeo/CollisionResult.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/InstanceHandle.hpp"
 #include "vgeo/Mat4.hpp"
@@ -180,7 +180,7 @@ public:
 
     // Queries
 
-    CollisionResults queryAll() const {
+    CollisionResult queryAll() const {
         if (m_pairCacheNeedsPrune) {
             std::erase_if(m_pairCache, [&](const auto& cachedPair) {
                 return !m_instances.isValid(cachedPair.second.a) || !m_instances.isValid(cachedPair.second.b);
@@ -195,7 +195,7 @@ public:
             m_dirtyInstances.clear();
         }
 
-        CollisionResults           results;
+        CollisionResult            results;
         std::vector<CandidatePair> candidates = m_broadphase.findCandidates();
 
         for (auto [handleA, handleB] : candidates) {

@@ -2,7 +2,7 @@
 
 #include "TSRigid3D.h"
 #include "TSVector3D.h"
-#include "vgeo/CollisionResults.hpp"
+#include "vgeo/CollisionResult.hpp"
 #include "vgeo/InstanceHandle.hpp"
 #include "vgeo/Real.hpp"
 #include "vgeo/internal/cpu/narrowphase/Epa.hpp"

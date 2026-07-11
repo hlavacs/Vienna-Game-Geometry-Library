@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vgeo/CollisionResults.hpp"
+#include "vgeo/CollisionResult.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/InstanceHandle.hpp"
 #include "vgeo/Mat4.hpp"
@@ -103,7 +103,7 @@ public:
 
     // Queries
 
-    CollisionResults queryAll() const {
+    CollisionResult queryAll() const {
         return m_backend.queryAll();
     }
 
