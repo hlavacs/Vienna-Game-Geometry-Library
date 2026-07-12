@@ -122,8 +122,10 @@ public:
 
     void setRotation(InstanceHandle h, vgeo::Quat rotation) {
         const Terathon::Point3D position = m_instances[h].motor.GetPosition();
-        m_instances[h].motor = Terathon::Motor3D::MakeTranslation({position.x, position.y, position.z}) *
-                               Terathon::Motor3D{Terathon::Quaternion{rotation.x, rotation.y, rotation.z, rotation.w}};
+        Terathon::Quaternion    quaternion{rotation.x, rotation.y, rotation.z, rotation.w};
+        quaternion.Normalize();
+        m_instances[h].motor =
+            Terathon::Motor3D::MakeTranslation({position.x, position.y, position.z}) * Terathon::Motor3D{quaternion};
         m_dirtyInstances.insert(h);
         m_broadphase.update(h, getWorldShape(h));
     }
@@ -257,8 +259,8 @@ public:
 
     RayResult castRay(Vec3 origin, Vec3 dir) const {
         const Terathon::Point3D           terathonOrigin{origin.x, origin.y, origin.z};
-        const Terathon::Vector3D          terathonDir{dir.x, dir.y, dir.z};
-        const std::vector<InstanceHandle> candidates = m_broadphase.castRay(terathonOrigin, terathonDir);
+        const Terathon::Vector3D          terathonDir = Terathon::Normalize(Terathon::Vector3D{dir.x, dir.y, dir.z});
+        const std::vector<InstanceHandle> candidates  = m_broadphase.castRay(terathonOrigin, terathonDir);
 
         RayResult result;
 
