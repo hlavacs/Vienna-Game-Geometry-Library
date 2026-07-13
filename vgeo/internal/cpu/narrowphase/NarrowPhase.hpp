@@ -127,7 +127,7 @@ collide(InstanceHandle handleA, const Capsule& capsule, InstanceHandle handleB, 
     const real              t       = std::clamp(Terathon::Dot(center - b1, d) / lenSq, real(0.0), real(1.0));
     const Terathon::Point3D closest = b1 + t * d;
 
-    const Terathon::Vector3D delta  = center - closest;
+    const Terathon::Vector3D delta  = closest - center;
     const real               distSq = Terathon::SquaredMag(delta);
     const real               rSum   = radius + capsule.getRadius();
 
@@ -143,8 +143,8 @@ collide(InstanceHandle handleA, const Capsule& capsule, InstanceHandle handleB, 
     }
 
     const Terathon::Vector3D normal   = (dist > 1e-6) ? delta / dist : Terathon::Vector3D{0.0, 1.0, 0.0};
-    const Terathon::Point3D  witnessA = center - normal * radius;
-    const Terathon::Point3D  witnessB = closest + normal * capsule.getRadius();
+    const Terathon::Point3D  witnessA = closest - normal * capsule.getRadius();
+    const Terathon::Point3D  witnessB = center + normal * radius;
 
     return CollisionPair{handleA,
                          handleB,
