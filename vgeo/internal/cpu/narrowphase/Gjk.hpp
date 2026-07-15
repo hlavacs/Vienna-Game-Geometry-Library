@@ -40,8 +40,8 @@ inline Terathon::Vector3D minkowskiSupport(const ShapeA& shapeA, const ShapeB& s
 
 struct Simplex {
     std::array<Terathon::Vector3D, 4> points;
-    std::array<Terathon::Point3D, 4>  supportPointsA; // Support points on shape A
-    std::array<Terathon::Point3D, 4>  supportPointsB; // Support points on shape B
+    std::array<Terathon::Point3D, 4>  supportPointsA;
+    std::array<Terathon::Point3D, 4>  supportPointsB;
     int                               size = 0;
 
     void pushFront(Terathon::Vector3D p, Terathon::Point3D pA, Terathon::Point3D pB) {
@@ -63,11 +63,23 @@ struct Simplex {
         size = std::min(size + 1, 4);
     }
 
-    void set(std::initializer_list<Terathon::Vector3D> list) {
-        size = 0;
-        for (const auto& p : list) {
-            points[size++] = p;
+    void set(std::initializer_list<int> indices) {
+        std::array<Terathon::Vector3D, 4> newPoints;
+        std::array<Terathon::Point3D, 4>  newSupportA;
+        std::array<Terathon::Point3D, 4>  newSupportB;
+
+        int i = 0;
+        for (int idx : indices) {
+            newPoints[i]   = points[idx];
+            newSupportA[i] = supportPointsA[idx];
+            newSupportB[i] = supportPointsB[idx];
+            ++i;
         }
+
+        points         = newPoints;
+        supportPointsA = newSupportA;
+        supportPointsB = newSupportB;
+        size           = i;
     }
 
     bool lineCase(Terathon::Vector3D& dir) {
@@ -79,7 +91,7 @@ struct Simplex {
         if (isSameDirection(ab, ao)) {
             dir = perpendicularTowards(ab, ao);
         } else {
-            set({points[0]});
+            set({0});
             dir = ao;
         }
         return false;
@@ -96,20 +108,20 @@ struct Simplex {
 
         if (isSameDirection(Terathon::Cross(abc, ac), ao)) {
             if (isSameDirection(ac, ao)) {
-                set({points[0], points[2]});
+                set({0, 2});
                 dir = perpendicularTowards(ac, ao);
             } else {
-                set({points[0], points[1]});
+                set({0, 1});
                 return lineCase(dir);
             }
         } else if (isSameDirection(Terathon::Cross(ab, abc), ao)) {
-            set({points[0], points[1]});
+            set({0, 1});
             return lineCase(dir);
         } else if (isSameDirection(abc, ao)) {
             dir = abc;
         } else {
             // flip winding so normal points toward origin
-            set({points[0], points[2], points[1]});
+            set({0, 2, 1});
             dir = (Terathon::SquaredMag(abc) > 1e-12) ? -abc : arbitraryPerpendicular(ab);
         }
 
@@ -130,15 +142,15 @@ struct Simplex {
         Terathon::Vector3D adb = Terathon::Cross(ad, ab);
 
         if (isSameDirection(abc, ao)) {
-            set({points[0], points[1], points[2]});
+            set({0, 1, 2});
             return triangleCase(dir);
         }
         if (isSameDirection(acd, ao)) {
-            set({points[0], points[2], points[3]});
+            set({0, 2, 3});
             return triangleCase(dir);
         }
         if (isSameDirection(adb, ao)) {
-            set({points[0], points[3], points[1]});
+            set({0, 3, 1});
             return triangleCase(dir);
         }
 
