@@ -1,11 +1,15 @@
 #pragma once
 
-#include "vgeo/Point3D.hpp"
+#include "vgeo/Real.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Aabb.hpp"
 #include "vgeo/internal/cpu/BoundingVolume.hpp"
 #include "vgeo/internal/cpu/shapes/CollisionShape.hpp"
 
+#include <TSMotor3D.h>
 #include <TSVector3D.h>
+
+#include <optional>
 
 namespace vgeo::internal::cpu {
 
@@ -13,7 +17,8 @@ class AaBox {
 public:
     AaBox() = default;
 
-    AaBox(Point3D min, Point3D max) : m_min{min.x, min.y, min.z}, m_max{max.x, max.y, max.z} {}
+    explicit AaBox(Vec3 halfExtents)
+        : m_min{-halfExtents.x, -halfExtents.y, -halfExtents.z}, m_max{halfExtents.x, halfExtents.y, halfExtents.z} {}
 
     [[nodiscard]] Terathon::Point3D getMin() const {
         return m_min;
@@ -30,9 +35,77 @@ public:
         return {(m_min.x + m_max.x) * 0.5f, (m_min.y + m_max.y) * 0.5f, (m_min.z + m_max.z) * 0.5f};
     }
 
+    // AaBox has no rotation to stay axis aligned, only translation and scale
+    [[nodiscard]] AaBox applyTransform(const Terathon::Motor3D& motor, real scale) const {
+        const Terathon::Point3D pos = motor.GetPosition();
+        AaBox                   result;
+        result.m_min = Terathon::Point3D(m_min.x * scale + pos.x, m_min.y * scale + pos.y, m_min.z * scale + pos.z);
+        result.m_max = Terathon::Point3D(m_max.x * scale + pos.x, m_max.y * scale + pos.y, m_max.z * scale + pos.z);
+        return result;
+    }
+
     [[nodiscard]] Terathon::Point3D support(Terathon::Vector3D dir) const {
-        return {
-            dir.x >= 0.0f ? m_max.x : m_min.x, dir.y >= 0.0f ? m_max.y : m_min.y, dir.z >= 0.0f ? m_max.z : m_min.z};
+        dir = Terathon::Normalize(dir);
+        return {dir.x >= 0.0 ? m_max.x : m_min.x, dir.y >= 0.0 ? m_max.y : m_min.y, dir.z >= 0.0 ? m_max.z : m_min.z};
+    }
+
+    [[nodiscard]] std::optional<RayHit>
+    intersectRay(InstanceHandle handle, Terathon::Point3D origin, Terathon::Vector3D dir) const {
+        real tEntry  = 0.0;
+        real tExit   = std::numeric_limits<real>::max();
+        int  hitAxis = 0;
+
+        for (int axis = 0; axis < 3; ++axis) {
+            const real originAxis = axis == 0 ? origin.x : axis == 1 ? origin.y : origin.z;
+            const real dirAxis    = axis == 0 ? dir.x : axis == 1 ? dir.y : dir.z;
+            const real slabMin    = axis == 0 ? m_min.x : axis == 1 ? m_min.y : m_min.z;
+            const real slabMax    = axis == 0 ? m_max.x : axis == 1 ? m_max.y : m_max.z;
+
+            if (std::abs(dirAxis) < 1e-6) {
+                if (originAxis < slabMin || originAxis > slabMax) {
+                    return std::nullopt;
+                }
+                continue;
+            }
+
+            real t0 = (slabMin - originAxis) / dirAxis;
+            real t1 = (slabMax - originAxis) / dirAxis;
+
+            if (t0 > t1) {
+                std::swap(t0, t1);
+            }
+
+            if (t0 > tEntry) {
+                tEntry  = t0;
+                hitAxis = axis;
+            }
+            tExit = std::min(tExit, t1);
+
+            if (tEntry > tExit) {
+                return std::nullopt;
+            }
+        }
+
+        if (tEntry < 0.0) {
+            return std::nullopt;
+        }
+
+        const Terathon::Point3D position = origin + dir * tEntry;
+
+        Terathon::Vector3D normal{0.0, 0.0, 0.0};
+        switch (hitAxis) {
+            case 0:
+                normal.x = dir.x > 0.0 ? -1.0 : 1.0;
+                break;
+            case 1:
+                normal.y = dir.y > 0.0 ? -1.0 : 1.0;
+                break;
+            case 2:
+                normal.z = dir.z > 0.0 ? -1.0 : 1.0;
+                break;
+        }
+
+        return RayHit{handle, Vec3{position.x, position.y, position.z}, Vec3{normal.x, normal.y, normal.z}, tEntry};
     }
 
 private:

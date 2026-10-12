@@ -1,12 +1,14 @@
+#pragma once
+
 #include <cstdint>
 
 namespace vgeo {
 
 enum class ShapeType : uint32_t {
-    Sphere = 0,
-    Capsule = 1,
-    AaBox = 2,
-    ConvexHull = 3,
+    AaBox    = 0,
+    Capsule  = 1,
+    Polytope = 2,
+    Sphere   = 3,
 };
 
 } // namespace vgeo

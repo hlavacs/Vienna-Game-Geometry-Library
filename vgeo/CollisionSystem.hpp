@@ -1,80 +1,148 @@
 #pragma once
 
-#include "vgeo/CollisionResults.hpp"
-#include "vgeo/Handle.hpp"
-#include "vgeo/Point3D.hpp"
+#include "vgeo/CollisionResult.hpp"
+#include "vgeo/GeometryHandle.hpp"
+#include "vgeo/InstanceHandle.hpp"
+#include "vgeo/Mat4.hpp"
+#include "vgeo/Quat.hpp"
 #include "vgeo/RayResult.hpp"
-#include "vgeo/UserPolicy.hpp"
-#include "vgeo/Vector3D.hpp"
-#include "vgeo/descriptors/AaBoxDesc.hpp"
-#include "vgeo/descriptors/CapsuleDesc.hpp"
-#include "vgeo/descriptors/ConvexHullDesc.hpp"
-#include "vgeo/descriptors/SphereDesc.hpp"
-#include "vgeo/internal/CollisionBackend.hpp"
+#include "vgeo/Real.hpp"
+#include "vgeo/Vec3.hpp"
 #include "vgeo/internal/cpu/Backend.hpp"
+#include "vgeo/internal/cpu/Bvh.hpp"
 
+#include <cassert>
 #include <optional>
+#include <span>
+
+#ifdef VGEO_WITH_VULKAN
+struct VkPhysicalDevice_T;
+#endif
 
 namespace vgeo {
 
-template <typename Bv = Aabb>
+template <internal::cpu::BroadPhase Bp = internal::cpu::Bvh<>>
 class CollisionSystem {
 public:
-    static CollisionSystem cpu() {
-        return CollisionSystem(internal::cpu::Backend<Bv>{});
+    CollisionSystem() = default;
+
+    template <typename... Args>
+    explicit CollisionSystem(Args&&... args) : m_backend(std::forward<Args>(args)...) {}
+
+#ifdef VGEO_WITH_VULKAN
+    explicit CollisionSystem(VkPhysicalDevice_T* physicalDevice) : m_backend(physicalDevice) {}
+#endif
+
+    // Geometry
+
+    GeometryHandle defineAaBox(Vec3 halfExtents) {
+        assert(halfExtents.x > 0 && halfExtents.y > 0 && halfExtents.z > 0);
+        return m_backend.defineAaBox(halfExtents);
     }
 
-    // TODO: make gpu backend
-    static CollisionSystem gpu() = delete;
-
-    Handle addAaBox(const AaBoxDesc& aaBox) {
-        return m_backend.add(aaBox);
+    GeometryHandle defineCapsule(real halfLength, real radius) {
+        assert(halfLength > 0);
+        assert(radius > 0);
+        return m_backend.defineCapsule(halfLength, radius);
     }
 
-    Handle addCapsule(const CapsuleDesc& capsule) {
-        return m_backend.add(capsule);
+    GeometryHandle definePolytope(std::span<const Vec3> points) {
+        assert(points.size() >= 4);
+        return m_backend.definePolytope(points);
     }
 
-    Handle addConvexHull(const ConvexHullDesc& convexHull) {
-        return m_backend.add(convexHull);
+    GeometryHandle defineSphere(real radius) {
+        assert(radius > 0);
+        return m_backend.defineSphere(radius);
     }
 
-    Handle addSphere(const SphereDesc& sphere) {
-        return m_backend.add(sphere);
+    void removeGeometry(GeometryHandle geometry) {
+        assert(isValidGeometry(geometry));
+        m_backend.removeGeometry(geometry);
     }
 
-    void remove(Handle handle) {
+    bool isValidGeometry(GeometryHandle geometry) const {
+        return m_backend.isValidGeometry(geometry);
+    }
+
+    // Instances
+
+    InstanceHandle add(GeometryHandle geometry, Vec3 position = {}) {
+        assert(isValidGeometry(geometry));
+        return m_backend.add(geometry, position);
+    }
+
+    void setPosition(InstanceHandle handle, Vec3 position) {
+        assert(isValid(handle));
+        m_backend.setPosition(handle, position);
+    }
+
+    void setRotation(InstanceHandle handle, Quat rotation) {
+        assert(isValid(handle));
+        m_backend.setRotation(handle, rotation);
+    }
+
+    void setScale(InstanceHandle handle, real scale) {
+        assert(isValid(handle));
+        assert(scale > 0);
+        m_backend.setScale(handle, scale);
+    }
+
+    Vec3 getPosition(InstanceHandle handle) const {
+        assert(isValid(handle));
+        return m_backend.getPosition(handle);
+    }
+
+    Quat getRotation(InstanceHandle handle) const {
+        assert(isValid(handle));
+        return m_backend.getRotation(handle);
+    }
+
+    real getScale(InstanceHandle handle) const {
+        assert(isValid(handle));
+        return m_backend.getScale(handle);
+    }
+
+    // Returns olumn-major 4x4 matrix combining rotation, scale, and translation.
+    Mat4 getTransform(InstanceHandle handle) const {
+        assert(isValid(handle));
+        return m_backend.getTransform(handle);
+    }
+
+    void remove(InstanceHandle handle) {
+        assert(isValid(handle));
         m_backend.remove(handle);
     }
 
-    bool isValid(Handle handle) const {
+    bool isValid(InstanceHandle handle) const {
         return m_backend.isValid(handle);
     }
 
-    CollisionResults queryAll() const {
+    // Queries
+
+    CollisionResult queryAll() const {
         return m_backend.queryAll();
     }
 
-    std::optional<CollisionPair> queryPair(Handle shapeA, Handle shapeB) const {
+    std::optional<CollisionPair> queryPair(InstanceHandle shapeA, InstanceHandle shapeB) const {
+        assert(isValid(shapeA));
+        assert(isValid(shapeB));
         return m_backend.queryPair(shapeA, shapeB);
     }
 
-    bool queryOverlap(Handle shapeA, Handle shapeB) const {
+    bool queryOverlap(InstanceHandle shapeA, InstanceHandle shapeB) const {
+        assert(isValid(shapeA));
+        assert(isValid(shapeB));
         return m_backend.overlaps(shapeA, shapeB);
     }
 
-    RayResult castRay(Point3D origin, Vector3D dir) const {
+    RayResult castRay(Vec3 origin, Vec3 dir) const {
+        assert(dir.x != 0 || dir.y != 0 || dir.z != 0);
         return m_backend.castRay(origin, dir);
     }
 
 private:
-    explicit CollisionSystem(internal::cpu::Backend<Bv> backend) : m_backend(std::move(backend)) {}
-
-    // use this later, when gpu backend is added:
-    // std::variant<internal::cpu::Backend<Bv>, internal::gpu::Backend>
-    internal::cpu::Backend<Bv> m_backend;
+    internal::cpu::Backend<Bp> m_backend;
 };
-
-static_assert(internal::CollisionBackend<internal::cpu::Backend<Aabb>>);
 
 } // namespace vgeo
