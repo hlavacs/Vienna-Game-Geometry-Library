@@ -5,16 +5,21 @@ struct AABB {
     vec4 max;
 };
 
+struct AABB_pair {
+    AABB box1;
+    AABB box2;
+};
+
 layout(push_constant) uniform PushConstants {
     uint N;
 } pc;
 
 layout(std430, binding = 0) readonly buffer inBuffer{
-    AABB AABBin[];
+    AABB_pair pairs_in[];
 };
 
 layout(std430, binding = 1) buffer outBuffer{
-    AABB AABBout[];
+    AABB_pair pairs_out[];
 };
 
 layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
@@ -24,12 +29,16 @@ void main() {
 
     if (index >= pc.N) return;
 
-    AABB aabbIn = AABBin[index];
+    AABB_pair pair = pairs_in[index];
 
-    AABB aabbOut = AABB(vec4(0.0), vec4(1.0));
-    aabbOut.min = aabbIn.min + vec4(1.0);
-    aabbOut.max = aabbIn.max + vec4(1.0);
+    AABB aabbOut1 = AABB(vec4(0.0), vec4(1.0));
+    aabbOut1.min = pair.box1.min + vec4(1.0);
+    aabbOut1.max = pair.box1.max + vec4(1.0);
 
-    AABBout[index] = aabbOut;
+    AABB aabbOut2 = AABB(vec4(0.0), vec4(1.0));
+    aabbOut2.min = pair.box2.min + vec4(1.0);
+    aabbOut2.max = pair.box2.max + vec4(1.0);
+
+    pairs_out[index] = AABB_pair(aabbOut1, aabbOut2);
 
 }
