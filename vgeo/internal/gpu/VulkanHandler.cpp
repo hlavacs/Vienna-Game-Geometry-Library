@@ -255,6 +255,12 @@ void VulkanHandler::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceS
     endSingleTimeCommands(commandBuffer);
 }
 
+void VulkanHandler::resetInputStorageBuffers() {
+    m_inputStorageBuffers.resize(0);
+    m_inputStorageBufferMemories.resize(0);
+    m_inputStorageBufferSizes.resize(0);
+}
+
 void VulkanHandler::createInputStorageBuffers(void* inputData, VkDeviceSize inputDataSize){
 
     VkBuffer stagingBuffer;
@@ -406,5 +412,6 @@ void VulkanHandler::runComputeShader(void* result){
 
     vkUnmapMemory(m_logicalDevice, m_outputBufferMemory);
 }
+
 
 }

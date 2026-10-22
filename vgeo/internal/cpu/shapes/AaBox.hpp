@@ -10,6 +10,7 @@
 #include <TSVector3D.h>
 
 #include <optional>
+#include <limits>
 
 namespace vgeo::internal::cpu {
 

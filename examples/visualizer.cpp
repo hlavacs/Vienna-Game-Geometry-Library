@@ -23,6 +23,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include <cstring>
+#include <regex>
+#include <fstream>
+#include <filesystem>
+
 constexpr Color clearColor{DARKGRAY};
 constexpr Color gridColor{LIGHTGRAY};
 constexpr Color baseColor{GRAY};
@@ -442,8 +447,17 @@ int main() {
 
     vgeo::GeometryHandle capsuleGeometry = defineCapsule(collisionSystem, capsuleGeometries, 2.0, 1.0);
     addCapsule(collisionSystem, capsuleGeometries, capsules, capsuleGeometry, {-2.0, 0.0, 0.0});
+    
+    std::string input = std::filesystem::current_path().generic_string();
+    std::regex re(R"(^.*?(?=Vienna-Game-Geometry-Library))");
 
-    ObjData              teapot = loadObj("resources/utah_teapot.obj");
+    std::smatch match;
+    std::string globalPath;
+    if (std::regex_search(input, match, re)) {
+        globalPath = match.str() + "Vienna-Game-Geometry-Library/";
+    }
+
+    ObjData              teapot = loadObj((globalPath + "resources/utah_teapot.obj").c_str());
     vgeo::GeometryHandle teapotGeometry =
         definePolytope(collisionSystem, polytopeGeometries, teapot.vertices, teapot.indices);
     vgeo::InstanceHandle teapotInstance =

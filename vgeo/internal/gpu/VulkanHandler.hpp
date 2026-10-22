@@ -8,6 +8,11 @@
 
 namespace vgeo::internal::gpu {
 
+enum class IntersectionTest : uint32_t {
+    SphereSphere    = 0,
+    CapsuleCapsule  = 1,
+};
+
 class VulkanHandler{
     const uint32_t SHADER_LOCAL_SIZE_X = 64;
 
@@ -37,6 +42,7 @@ class VulkanHandler{
         void createPipelineLayout();
         void createComputePipeline(const std::string& filename);
         void createCommandPool();
+        void resetInputStorageBuffers();
         void createInputStorageBuffers(void* inputData, VkDeviceSize inputDataSize);
         void createOutputStorageBuffer(VkDeviceSize outputDataSize);
         void createDescriptorPool();

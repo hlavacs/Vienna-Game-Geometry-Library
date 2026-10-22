@@ -67,5 +67,6 @@ if(PROJECT_IS_TOP_LEVEL)
 
     enable_testing()
     add_subdirectory(tests)
+    add_subdirectory(vgeo/internal/gpu/shaders)
 
 endif()

@@ -1,14 +1,21 @@
 #version 450
 
 struct AABB {
-    vec4 min;
-    vec4 max;
+    vec3 min;
+    vec3 max;
 };
 
 struct AABB_pair {
     AABB box1;
     AABB box2;
 };
+
+AABB addVector(const AABB box, const vec3 v) {
+    AABB aabbOut;
+    aabbOut.min = box.min + v;
+    aabbOut.max = box.max + v;
+    return aabbOut;
+}
 
 layout(push_constant) uniform PushConstants {
     uint N;
@@ -29,15 +36,10 @@ void main() {
 
     if (index >= pc.N) return;
 
-    AABB_pair pair = pairs_in[index];
+    const AABB_pair pair = pairs_in[index];
 
-    AABB aabbOut1 = AABB(vec4(0.0), vec4(1.0));
-    aabbOut1.min = pair.box1.min + vec4(1.0);
-    aabbOut1.max = pair.box1.max + vec4(1.0);
-
-    AABB aabbOut2 = AABB(vec4(0.0), vec4(1.0));
-    aabbOut2.min = pair.box2.min + vec4(1.0);
-    aabbOut2.max = pair.box2.max + vec4(1.0);
+    const AABB aabbOut1 = addVector(pair.box1, vec3(1.5));
+    const AABB aabbOut2 = addVector(pair.box2, vec3(3.5));
 
     pairs_out[index] = AABB_pair(aabbOut1, aabbOut2);
 

@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <span>
 #include <vector>
+#include <limits>
 
 namespace vgeo::internal::cpu {
 
