@@ -22,41 +22,23 @@ struct ComputePipeline {
 
 class VulkanHandler{
     const uint32_t SHADER_LOCAL_SIZE_X = 64;
-    const uint32_t NR_OF_PIPELINES = 2;
 
     VkPhysicalDevice m_physicalDevice;
     uint32_t m_computeQueueFamilyIndex;
     VkDevice m_logicalDevice;
     VkQueue m_computeQueue;
-    std::vector<VkDescriptorSetLayout> m_descriptorSetLayouts;
-    VkPushConstantRange m_pushConstantRange;
-    std::vector<VkPipelineLayout> m_pipelineLayouts;
-    std::vector<VkPipeline> m_computePipelines;
+
+
     VkCommandPool m_commandPool;
     VkCommandBuffer m_commandBuffer;
-    std::vector<VkBuffer> m_inputStorageBuffers;
-    std::vector<VkDeviceMemory> m_inputStorageBufferMemories;
-    std::vector<uint32_t> m_inputStorageBufferSizes;
-    VkBuffer m_outputBuffer;
-    VkDeviceMemory m_outputBufferMemory;
-    uint32_t m_outputBufferSize;
-    std::vector<VkDescriptorPool> m_descriptorPools;
-    std::vector<VkDescriptorSet> m_descriptorSets;
 
     public:
         VulkanHandler(VkPhysicalDevice& physicalDevice);
         void createLogicalDevice();
         ComputePipeline createPipeline(const std::string& filename, const std::vector<VkDeviceSize>& bufferSizes);
-
-        void createPushConstantRange();
-
         void createCommandPool();
-
-        StorageBuffer createStorageBuffer(VkDeviceSize bufferSize);
-
-
         void startRecordingCommandBuffer();
-        void recordCommandBuffer(void* inputData, VkDeviceSize inputDataSize, ComputePipeline pipeline);
+        void recordCommandBuffer(void* inputData, VkDeviceSize inputDataSize, uint32_t inputDataEnd, ComputePipeline pipeline);
         void runComputeShader();
         void getResults(void* result, ComputePipeline pipeline);
         void cleanup(std::vector<ComputePipeline> pipelines);
@@ -64,6 +46,7 @@ class VulkanHandler{
 
     private:
 
+        StorageBuffer createStorageBuffer(VkDeviceSize bufferSize);
         VkDescriptorSetLayout createDescriptorSetLayout();
         VkDescriptorPool createDescriptorPool(uint32_t bufferCount);
 

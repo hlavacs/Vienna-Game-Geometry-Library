@@ -1,3 +1,5 @@
+#pragma once
+
 #include "vgeo/Vec3.hpp"
 
 namespace vgeo::internal::gpu{

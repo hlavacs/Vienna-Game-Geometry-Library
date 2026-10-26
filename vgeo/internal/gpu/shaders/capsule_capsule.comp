@@ -1,17 +1,14 @@
 #version 450
 
+#extension GL_ARB_shading_language_include : enable
+
+#include "shader_terathon.h"
+#include "contact.h"
+
 struct Capsule {
     vec3 a;
     vec3 b;
     float radius;
-};
-
-struct Contact{
-    bool hasContact;
-    float depth;
-    vec3 normal;
-    vec3 witnessA;
-    vec3 witnessB;
 };
 
 layout(push_constant) uniform PushConstants {
@@ -33,11 +30,84 @@ void main() {
 
     if (index >= pc.N) return;
 
-    const Capsule capsuleA = capsule_in[2*index];
-    const Capsule capsuleB = capsule_in[2*index+1];
+    const Capsule capsule1 = capsule_in[2*index];
+    const Capsule capsule2 = capsule_in[2*index+1];
 
+    Point3D a1 = toPoint(capsule1.a);
+    Point3D b1 = toPoint(capsule1.b);
+    Point3D a2 = toPoint(capsule2.a);
+    Point3D b2 = toPoint(capsule2.b);
+    const Vector3D d1 = subtract(b1, a1);
+    const Vector3D d2 = subtract(b2, a2);
+    const float len1Sq = squaredMag(d1);
+    const float len2Sq = squaredMag(d2);
 
+    float s;
+    float t;
+    Point3D closest1;
+    Point3D closest2;
 
-    contacts[index] = Contact(true, capsuleB.radius, capsuleA.a, capsuleA.b, capsuleB.a);
+    if (len1Sq <= 1e-6 && len2Sq <= 1e-6) {
+        s = 0.0;
+        t = 0.0;
+        closest1 = a1;
+        closest2 = a2;
+
+    } else if (len1Sq <= 1e-6) {
+        s = 0.0;
+        t = clamp(dot(subtract(a1, a2), d2) / len2Sq, 0.0, 1.0);
+        closest1 = a1;
+        closest2 = add(a2, multiply(d2, t));
+
+    } else if (len2Sq <= 1e-6) {
+        const float c = dot(d1, subtract(a1, a2));
+        t = 0.0;
+        s = clamp(-c / len1Sq, 0.0, 1.0);
+        closest1 = add(a1, multiply(d1, s));
+        closest2 = a2;
+
+    } else {
+        const float b = dot(d1, d2);        
+        const float c = dot(d1, subtract(a1, a2));
+        const float f = dot(d2, subtract(a1, a2));
+        const float denom = len1Sq * len2Sq - b * b;
+
+        s = (denom != 0.0) ? clamp((b * f - c * len2Sq) / denom, 0.0, 1.0) : 0.0;
+        t = (b * s + f) / len2Sq;
+
+        if (t < 0.0) {
+            t = 0.0;
+            s = clamp(-c / len1Sq, 0.0, 1.0);
+        } else if (t > 1.0) {
+            t = 1.0;
+            s = clamp((b - c) / len1Sq, 0.0, 1.0);
+        }
+
+        closest1 = add(a1, multiply(d1, s));
+        closest2 = add(a2, multiply(d2, t));
+    }
+
+    const Vector3D delta  = subtract(closest1, closest2);
+    const float distSq = squaredMag(delta);
+    const float rSum   = capsule1.radius + capsule2.radius;
+
+    if (distSq >= rSum * rSum) {
+        contacts[index] = Contact(false, 0.0, vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0));
+        return;
+    }
+
+    const float dist  = sqrt(distSq);
+    const float depth = rSum - dist;
+
+    if (depth <= 0.0) {
+        contacts[index] = Contact(false, 0.0, vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0));
+        return;
+    }
+
+    const Vector3D normal = (dist > 1e-6) ? divide(delta, dist) : Vector3D(0.0, 1.0, 0.0);
+    const Point3D witnessA = subtract(closest1, multiply(normal, capsule1.radius));
+    const Point3D witnessB = subtract(closest2, multiply(normal, capsule2.radius));    
+
+    contacts[index] = Contact(true, capsule2.radius, capsule1.a, capsule1.b, capsule2.a);
 
 }

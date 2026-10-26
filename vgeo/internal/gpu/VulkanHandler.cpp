@@ -52,10 +52,6 @@ uint32_t VulkanHandler::findComputeQueueFamilyIndex(){
 VulkanHandler::VulkanHandler(VkPhysicalDevice& physicalDevice){
     m_physicalDevice = physicalDevice;
     m_computeQueueFamilyIndex = findComputeQueueFamilyIndex();
-    m_descriptorSetLayouts.resize(NR_OF_PIPELINES);
-    m_pipelineLayouts.resize(NR_OF_PIPELINES);
-    m_computePipelines.resize(NR_OF_PIPELINES);
-    m_descriptorPools.resize(NR_OF_PIPELINES);
 }
 
 void VulkanHandler::createLogicalDevice(){
@@ -77,13 +73,6 @@ void VulkanHandler::createLogicalDevice(){
     }
 
     vkGetDeviceQueue(m_logicalDevice, m_computeQueueFamilyIndex, 0, &m_computeQueue);
-}
-
-
-void VulkanHandler::createPushConstantRange(){
-    m_pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    m_pushConstantRange.offset = 0;
-    m_pushConstantRange.size = sizeof(uint32_t);
 }
 
 VkShaderModule VulkanHandler::createShaderModule(const std::vector<char>& code) {
@@ -252,6 +241,12 @@ ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const
 
     vkUpdateDescriptorSets(m_logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
+    VkPushConstantRange pushConstantRange;
+
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(uint32_t);
+
     VkPipelineLayout pipelineLayout;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -259,7 +254,7 @@ ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
     pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pPushConstantRanges = &m_pushConstantRange;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     if (vkCreatePipelineLayout(m_logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("failed to create compute pipeline layout!");
@@ -287,6 +282,7 @@ ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const
     if (vkCreateComputePipelines(m_logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline) != VK_SUCCESS) {
         throw std::runtime_error("failed to create compute pipeline!");
     }
+    
 
     return ComputePipeline{descriptorSetLayout, descriptorPool, descriptorSet, storageBuffers[0], storageBuffers[1], pipelineLayout, computePipeline};
 }
@@ -369,11 +365,11 @@ void VulkanHandler::startRecordingCommandBuffer(){
 
 }
 
-void VulkanHandler::recordCommandBuffer(void* inputData, VkDeviceSize inputDataSize, ComputePipeline pipeline) {
+void VulkanHandler::recordCommandBuffer(void* inputData, VkDeviceSize inputDataSize, uint32_t inputDataEnd, ComputePipeline pipeline) {
 
     memcpy(pipeline.m_inputBuffers.m_data, inputData, (size_t)inputDataSize);
 
-    vkCmdPushConstants(m_commandBuffer, pipeline.m_pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &pipeline.m_inputBuffers.m_bufferSize);
+    vkCmdPushConstants(m_commandBuffer, pipeline.m_pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &inputDataEnd);
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.m_computePipeline);
     vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.m_pipelineLayout, 0, 1, &pipeline.m_descriptorSet, 0, 0);
 
