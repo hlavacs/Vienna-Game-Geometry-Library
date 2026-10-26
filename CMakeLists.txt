@@ -25,7 +25,7 @@ if(VGEO_DOUBLE_PRECISION)
     target_compile_definitions(TerathonMathLibrary PUBLIC VGEO_DOUBLE_PRECISION)
 endif()
 
-option(VGEO_WITH_VULKAN "Enable the Vulkan-based GPU backend (requires the Vulkan SDK)" OFF)
+option(VGEO_WITH_VULKAN "Enable the Vulkan-based GPU backend (requires the Vulkan SDK)" ON)
 
 # Library
 add_library(vgeo STATIC
@@ -38,6 +38,7 @@ target_link_libraries(vgeo PUBLIC TerathonMathLibrary)
 if(VGEO_WITH_VULKAN)
     find_package(Vulkan REQUIRED)
     target_sources(vgeo PRIVATE vgeo/internal/gpu/VulkanHandler.cpp)
+    target_sources(vgeo PRIVATE vgeo/internal/gpu/helpers/StorageBuffer.hpp)
     target_compile_definitions(vgeo PUBLIC VGEO_WITH_VULKAN)
     target_link_libraries(vgeo PUBLIC Vulkan::Vulkan)
 endif()

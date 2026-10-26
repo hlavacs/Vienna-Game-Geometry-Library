@@ -11,6 +11,7 @@
 #include "vgeo/internal/gpu/shapes/AaBox.hpp"
 #include "vgeo/internal/gpu/shapes/GpuSphere.hpp"
 #include "vgeo/internal/gpu/shapes/GpuContact.hpp"
+#include "vgeo/internal/gpu/shapes/GpuCapsule.hpp"
 
 #include <TSConformal3D.h>
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
@@ -34,8 +35,17 @@ struct AABB {
     float padding2;
 };
 
+enum class IntersectionTest : uint32_t {
+    SphereSphere    = 0,
+    CapsuleCapsule  = 1,
+};
+
 template <typename Bv>
 class GpuBackend {
+
+    const std::map<IntersectionTest, std::string> SHADERFILES = { {IntersectionTest::SphereSphere,"shaders/sphere_sphere.spv"},
+                                                            {IntersectionTest::CapsuleCapsule, "shaders/capsule_capsule.spv"}
+                                                        };
 
     VulkanHandler                      m_vulkanHandler;
     GeometryRegistry<ShapeType::AaBox> m_aaBoxRegistry;
@@ -43,24 +53,31 @@ class GpuBackend {
     // GeometryRegistry<ShapeType::Polytope> m_polytopeRegistry;
     GeometryRegistry<ShapeType::Sphere> m_sphereRegistry;
 
-    std::vector<ShaderAaBox> m_aaBoxes;
-    std::vector<vgeo::internal::cpu::Capsule> m_capsules;
+    std::vector<AaBox> m_aaBoxes;
+    std::vector<GpuCapsule> m_capsules;
     // std::vector<Polytope> m_polytopes;
     std::vector<GpuSphere> m_spheres;
     std::vector<SpherePair> m_spherePairs;
+
+    std::vector<ComputePipeline> m_computePipelines;
 
 
 public:
     int                test;
     Bv                 m_boundingVolume;
-    std::vector<ShaderAaBox> m_testBoxes;
+    std::vector<AaBox> m_testBoxes;
     std::vector<GpuContact> m_contacts;
+    std::vector<GpuContact> m_contacts2;
     GpuBackend(VkPhysicalDevice& physicalDevice);
+    void initPipeline();
     void queryBoxes();
     void querySpheres();
     void queryCapsules();
+    void query();
 
     uint32_t addPair(const vgeo::internal::cpu::Sphere& sphereA, const vgeo::internal::cpu::Sphere& sphereB);
+
+    void cleanup();
 
     GeometryHandle defineAaBox(Vec3 halfExtents);
     GeometryHandle defineSphere(real radius, Vec3 center);
@@ -115,6 +132,11 @@ private:
         return h;
     }
 
+    ComputePipeline createPipeline(IntersectionTest file){
+        std::vector<VkDeviceSize> bufferSizes = {sizeof(GpuSphere) * m_spheres.size(), sizeof(GpuContact) * (m_spheres.size()/2)};
+        return m_vulkanHandler.createPipeline(SHADERFILES.at(file), bufferSizes);
+    }
+
 };
 
 template <typename Bv>
@@ -122,24 +144,25 @@ GpuBackend<Bv>::GpuBackend(VkPhysicalDevice& physicalDevice) : m_vulkanHandler(p
     test = 1;
 
     m_vulkanHandler.createLogicalDevice();
-    m_vulkanHandler.createDescriptorSetLayouts();
-    m_vulkanHandler.createPipelineLayout();
-    m_vulkanHandler.createComputePipeline("shaders/sphere_sphere.spv");
+
+    
+}
+
+template <typename Bv>
+void GpuBackend<Bv>::initPipeline(){
+
+    std::vector<VkDeviceSize> bufferSizes = {sizeof(GpuSphere) * m_spheres.size(), sizeof(GpuContact) * (m_spheres.size()/2)};
+    m_computePipelines.push_back(m_vulkanHandler.createPipeline(SHADERFILES.at(IntersectionTest::SphereSphere), bufferSizes));
+    m_computePipelines.push_back(m_vulkanHandler.createPipeline(SHADERFILES.at(IntersectionTest::CapsuleCapsule), bufferSizes));
     m_vulkanHandler.createCommandPool();
+
 }
 
 template <typename Bv>
 void GpuBackend<Bv>::queryBoxes() {
-    VkDeviceSize bufferSize = sizeof(ShaderAaBox) * m_aaBoxes.size();
+    VkDeviceSize bufferSize = sizeof(AaBox) * m_aaBoxes.size();
     m_testBoxes.resize(m_aaBoxes.size());
 
-    m_vulkanHandler.createInputStorageBuffers(&m_aaBoxes[0], bufferSize);
-
-    m_vulkanHandler.createOutputStorageBuffer(bufferSize);
-
-    m_vulkanHandler.createDescriptorPool();
-    m_vulkanHandler.createDescriptorSets();
-    m_vulkanHandler.runComputeShader(&m_testBoxes[0]);
 }
 
 template <typename Bv>
@@ -147,18 +170,39 @@ void GpuBackend<Bv>::querySpheres() {
 
     test = m_spheres.size();
     VkDeviceSize bufferSizeIn = sizeof(GpuSphere) * m_spheres.size();
-    VkDeviceSize bufferSizeOut = sizeof(GpuContact) * (m_spheres.size()/2);
-
+    
     m_contacts.resize(m_spheres.size()/2);
+    
+    VkDeviceSize bufferSizeIn2 = sizeof(GpuCapsule) * m_capsules.size();
 
-    m_vulkanHandler.resetInputStorageBuffers();
-    m_vulkanHandler.createInputStorageBuffers(&m_spheres[0], bufferSizeIn);
+    m_contacts2.resize(m_capsules.size()/2);
 
-    m_vulkanHandler.createOutputStorageBuffer(bufferSizeOut);
-    m_vulkanHandler.createDescriptorPool();
-    m_vulkanHandler.createDescriptorSets();   
-    m_vulkanHandler.runComputeShader(&m_contacts[0]);
+    m_vulkanHandler.startRecordingCommandBuffer();
+    m_vulkanHandler.recordCommandBuffer(&m_spheres[0], bufferSizeIn, m_computePipelines[0]);
+    m_vulkanHandler.recordCommandBuffer(&m_capsules[0], bufferSizeIn2, m_computePipelines[1]);
+    m_vulkanHandler.runComputeShader();
+    m_vulkanHandler.getResults(&m_contacts[0], m_computePipelines[0]);
+    m_vulkanHandler.getResults(&m_contacts2[0], m_computePipelines[1]);
 
+}
+
+template <typename Bv>
+void GpuBackend<Bv>::query() {
+
+    VkDeviceSize bufferSizeIn = sizeof(GpuSphere) * m_spheres.size();
+    m_vulkanHandler.recordCommandBuffer(&m_spheres[0], bufferSizeIn, m_computePipelines[0]);
+
+    VkDeviceSize bufferSizeOut = sizeof(GpuContact) * (m_spheres.size()/2);
+    m_contacts.resize(0);
+    std::vector<GpuContact> contacts;
+    contacts.resize(m_spheres.size()/2);
+    /*
+    for (const auto intersectiontest : IntersectionTest::All){
+        uint32_t i = static_cast<uint32_t>(intersectiontest);
+
+
+    }
+    */
 }
 
 template <typename Bv>
@@ -168,15 +212,6 @@ void GpuBackend<Bv>::queryCapsules() {
     VkDeviceSize bufferSizeIn = sizeof(vgeo::internal::cpu::Capsule) * m_capsules.size();
     VkDeviceSize bufferSizeOut = sizeof(GpuContact) * (m_capsules.size()/2);
 
-    m_contacts.resize(m_capsules.size()/2);
-
-    m_vulkanHandler.resetInputStorageBuffers();
-    m_vulkanHandler.createInputStorageBuffers(&m_capsules[0], bufferSizeIn);
-
-    m_vulkanHandler.createOutputStorageBuffer(bufferSizeOut);
-    m_vulkanHandler.createDescriptorPool();
-    m_vulkanHandler.createDescriptorSets();   
-    m_vulkanHandler.runComputeShader(&m_contacts[0]);
 
 }
 
@@ -185,7 +220,7 @@ GeometryHandle GpuBackend<Bv>::defineAaBox(Vec3 halfExtents) {
     return addShape(
         m_aaBoxRegistry,
         m_aaBoxes,
-        ShaderAaBox{-halfExtents.x, -halfExtents.y, -halfExtents.z, 0.0f, halfExtents.x, halfExtents.y, halfExtents.z, 0.0f});
+        AaBox{-halfExtents.x, -halfExtents.y, -halfExtents.z, 0.0f, halfExtents.x, halfExtents.y, halfExtents.z, 0.0f});
 }
 
 template <typename Bv>
@@ -201,7 +236,7 @@ GeometryHandle GpuBackend<Bv>::defineCapsule(real radius, Vec3 a, Vec3 b) {
     return addShape(
         m_capsuleRegistry,
         m_capsules,
-        vgeo::internal::cpu::Capsule{a,b,radius});
+        GpuCapsule{a,b,radius});
 }
 
 
@@ -210,6 +245,11 @@ uint32_t GpuBackend<Bv>::addPair(const vgeo::internal::cpu::Sphere& sphereA, con
     uint32_t index = m_spherePairs.size();
     m_spherePairs.push_back(SpherePair{GpuSphere{sphereA.getSphere()}, GpuSphere{sphereB.getSphere()}});
     return index;
+}
+
+template <typename Bv>
+void GpuBackend<Bv>::cleanup() {
+    m_vulkanHandler.cleanup(m_computePipelines);
 }
 
 }

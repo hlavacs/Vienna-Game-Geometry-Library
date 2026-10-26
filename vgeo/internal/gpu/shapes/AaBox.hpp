@@ -1,6 +1,6 @@
 namespace vgeo::internal::gpu{
 
-struct ShaderAaBox{
+struct AaBox{
     float min_x;
     float min_y;
     float min_z;

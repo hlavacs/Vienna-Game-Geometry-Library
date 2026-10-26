@@ -37,10 +37,15 @@ TEST_CASE("Vulkan instance is created", "[vulkan]") {
         vgeo::internal::gpu::GpuBackend<vgeo::internal::gpu::AABB>(physicalDevice);
 
     
+    
     gpuBackend.defineSphere(1.0, {0.0,0.0,0.0});
     gpuBackend.defineSphere(1.0, {1.9,0.0,0.0});
     gpuBackend.defineSphere(0.5, {1.0, 1.0,1.0});
     gpuBackend.defineSphere(0.5, {2.0,2.0,2.0});
+    gpuBackend.defineCapsule(1.0, {-1.0,0.0,0.0}, {1.0,0.0,0.0});
+    gpuBackend.defineCapsule(1.0, {0.0,-1.0,0.0}, {0.0,1.0,0.0});
+
+    gpuBackend.initPipeline();
 
     gpuBackend.querySpheres();
 
@@ -51,7 +56,10 @@ TEST_CASE("Vulkan instance is created", "[vulkan]") {
     CHECK(gpuBackend.m_contacts[0].normal.y == 0.0);
     CHECK(gpuBackend.m_contacts[0].normal.z == 0.0);
     CHECK(gpuBackend.m_contacts[1].hasContact == false);
-
+    
+    CHECK(gpuBackend.m_contacts2[0].hasContact == true);
+    CHECK(gpuBackend.m_contacts2[0].depth == 1.0);
+    CHECK(gpuBackend.m_contacts2[0].normal.x  == -1.0);
 
     gpuBackend.defineSphere(0.1, {1.0, 1.0,1.0});
     gpuBackend.defineSphere(0.1, {2.0,2.0,2.0});
@@ -67,8 +75,9 @@ TEST_CASE("Vulkan instance is created", "[vulkan]") {
     CHECK(gpuBackend.m_contacts[2].hasContact == false);
     CHECK(gpuBackend.m_contacts[2].depth == 0.0);
 
-    //gpuBackend.defineCapsule(1.0, {-1.0,0.0,0.0}, {1.0,0.0,0.0});
-    //gpuBackend.defineCapsule(1.0, {0.0,-1.0,0.0}, {0.0,1.0,0.0});
+
+
+    gpuBackend.cleanup();
 
     // Destroy the Vulkan instance
     vkDestroyInstance(instance, nullptr);
