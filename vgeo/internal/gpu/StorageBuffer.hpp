@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vulkan/vulkan.h>
 
 namespace vgeo::internal::gpu{

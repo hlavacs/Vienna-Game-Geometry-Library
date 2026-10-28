@@ -6,19 +6,10 @@
 #include <regex>
 #include <vector>
 
-#include "helpers/StorageBuffer.hpp"
+#include "StorageBuffer.hpp"
+#include "ComputePipeline.hpp"
 
 namespace vgeo::internal::gpu {
-
-struct ComputePipeline {
-    VkDescriptorSetLayout m_descriptorSetLayout;
-    VkDescriptorPool m_descriptorPool;
-    VkDescriptorSet m_descriptorSet;
-    StorageBuffer m_inputBuffers;
-    StorageBuffer m_outputBuffer;
-    VkPipelineLayout m_pipelineLayout;
-    VkPipeline m_computePipeline;
-};
 
 class VulkanHandler{
     const uint32_t SHADER_LOCAL_SIZE_X = 64;
@@ -38,7 +29,7 @@ class VulkanHandler{
         ComputePipeline createPipeline(const std::string& filename, const std::vector<VkDeviceSize>& bufferSizes);
         void createCommandPool();
         void startRecordingCommandBuffer();
-        void recordCommandBuffer(void* inputData, VkDeviceSize inputDataSize, uint32_t inputDataEnd, ComputePipeline pipeline);
+        void recordCommandBuffer(void* inputData, uint32_t inputDataSize, ComputePipeline pipeline);
         void runComputeShader();
         void getResults(void* result, ComputePipeline pipeline);
         void cleanup(std::vector<ComputePipeline> pipelines);

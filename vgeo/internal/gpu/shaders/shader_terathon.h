@@ -123,3 +123,9 @@ Circle3D antiwedge(const Sphere3D s, const Sphere3D t){
 
     return Circle3D(g, v, m);
 }
+
+struct Capsule {
+    Point3D a;
+    Point3D b;
+    float radius;
+};

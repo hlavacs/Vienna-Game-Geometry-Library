@@ -365,11 +365,11 @@ void VulkanHandler::startRecordingCommandBuffer(){
 
 }
 
-void VulkanHandler::recordCommandBuffer(void* inputData, VkDeviceSize inputDataSize, uint32_t inputDataEnd, ComputePipeline pipeline) {
+void VulkanHandler::recordCommandBuffer(void* inputData, uint32_t inputDataSize, ComputePipeline pipeline) {
 
-    memcpy(pipeline.m_inputBuffers.m_data, inputData, (size_t)inputDataSize);
+    memcpy(pipeline.m_inputBuffers.m_data, inputData, (size_t)pipeline.m_inputBuffers.m_bufferSize);
 
-    vkCmdPushConstants(m_commandBuffer, pipeline.m_pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &inputDataEnd);
+    vkCmdPushConstants(m_commandBuffer, pipeline.m_pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &inputDataSize);
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.m_computePipeline);
     vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.m_pipelineLayout, 0, 1, &pipeline.m_descriptorSet, 0, 0);
 

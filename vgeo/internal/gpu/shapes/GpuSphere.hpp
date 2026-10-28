@@ -6,6 +6,7 @@
 namespace vgeo::internal::gpu{
 
 struct GpuSphere {
+    uint64_t id;
     Terathon::Sphere3D m_sphere;
 };
 

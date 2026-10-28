@@ -6,8 +6,9 @@
 namespace vgeo::internal::gpu{
 
 struct GpuCapsule{
-    alignas(16) Vec3 m_a;
-    alignas(16) Vec3 m_b;
+    uint64_t id;
+    Terathon::Point3D m_a;
+    Terathon::Point3D m_b;
     real m_radius;
 };
 

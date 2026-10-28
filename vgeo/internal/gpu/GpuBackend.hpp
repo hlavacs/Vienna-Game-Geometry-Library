@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "vgeo/CollisionResult.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/RayResult.hpp"
@@ -12,22 +14,14 @@
 #include "vgeo/internal/gpu/shapes/GpuSphere.hpp"
 #include "vgeo/internal/gpu/shapes/GpuContact.hpp"
 #include "vgeo/internal/gpu/shapes/GpuCapsule.hpp"
+#include "vgeo/internal/gpu/shapes/ShapePair.hpp"
+#include "vgeo/internal/gpu/IntersectionType.hpp"
 
 #include <TSConformal3D.h>
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
 #include "vgeo/internal/cpu/shapes/Capsule.hpp"
 
 namespace vgeo::internal::gpu {
-
-struct SpherePair {
-    GpuSphere sphereA;
-    GpuSphere sphereB;
-};
-
-struct CapsulePair {
-    GpuCapsule capsuleA;
-    GpuCapsule capsuleB;
-};
 
 struct AABB {
     float minx;
@@ -40,18 +34,12 @@ struct AABB {
     float padding2;
 };
 
-enum class IntersectionTest : uint32_t {
-    SphereSphere    = 0,
-    CapsuleCapsule  = 1,
-};
 
 template <typename Bv>
 class GpuBackend {
 
-    const std::map<IntersectionTest, std::string> SHADERFILES = { {IntersectionTest::SphereSphere,"shaders/sphere_sphere.spv"},
-                                                            {IntersectionTest::CapsuleCapsule, "shaders/capsule_capsule.spv"}
-                                                        };
     const uint32_t BUFFEROBJECTS = 64;
+    const uint32_t SHADERCOUNT = 3;
     VulkanHandler                      m_vulkanHandler;
     GeometryRegistry<ShapeType::AaBox> m_aaBoxRegistry;
     GeometryRegistry<ShapeType::Capsule> m_capsuleRegistry;
@@ -62,10 +50,10 @@ class GpuBackend {
     std::vector<GpuCapsule> m_capsules;
     // std::vector<Polytope> m_polytopes;
     std::vector<GpuSphere> m_spheres;
-    std::vector<SpherePair> m_spherePairs;
-    std::vector<CapsulePair> m_capsulePairs;
 
+    std::map<uint64_t, InstanceHandle> m_instanceHandles;
     std::vector<ComputePipeline> m_computePipelines;
+    std::vector<std::vector<ShapePair>> m_pairs;
 
 
 public:
@@ -77,18 +65,19 @@ public:
     GpuBackend(VkPhysicalDevice& physicalDevice);
     void initPipeline();
     void queryBoxes();
-    void querySpheres();
+    std::vector<GpuContact> querySpheres();
     void queryCapsules();
-    void query();
+    CollisionResult query();
 
-    uint32_t addPair(const vgeo::internal::cpu::Sphere& sphereA, const vgeo::internal::cpu::Sphere& sphereB);
-    uint32_t addPair(const vgeo::internal::cpu::Capsule& capsuleA, const vgeo::internal::cpu::Capsule& capsuleB);
+    void addPair(InstanceHandle handleA, const vgeo::internal::cpu::Sphere& sphereA, InstanceHandle handleB, const vgeo::internal::cpu::Sphere& sphereB);
+    void addPair(InstanceHandle handleA, const vgeo::internal::cpu::Capsule& capsuleA, InstanceHandle handleB, const vgeo::internal::cpu::Capsule& capsuleB);
+    void addPair(InstanceHandle handleA, const vgeo::internal::cpu::Capsule& capsule, InstanceHandle handleB, const vgeo::internal::cpu::Sphere& sphere);
 
     void cleanup();
 
     GeometryHandle defineAaBox(Vec3 halfExtents);
-    GeometryHandle defineSphere(real radius, Vec3 center);
-    GeometryHandle defineCapsule(real radius, Vec3 a, Vec3 b);
+    GeometryHandle defineSphere(real radius, Vec3 center, InstanceHandle handle);
+    GeometryHandle defineCapsule(real radius, Vec3 a, Vec3 b, InstanceHandle handle);
     /*
     GeometryHandle define(const CapsuleDesc& desc) {
         return addShape(m_capsuleRegistry, m_capsules, Capsule{desc.a, desc.b, desc.radius});
@@ -139,6 +128,49 @@ private:
         return h;
     }
 
+    std::string getShaderFile(IntersectionType intersection){
+        switch (intersection)
+        {
+        case IntersectionType::SphereSphere:
+            return "shaders/sphere_sphere.spv";    
+        case IntersectionType::CapsuleCapsule:
+            return "shaders/capsule_capsule.spv";
+        case IntersectionType::CapsuleSphere:
+            return "shaders/capsule_sphere.spv";
+        default:
+            throw std::runtime_error("Shaderfile does not exist");
+        }
+    }
+
+    uint32_t getIndex(IntersectionType intersection){
+        return std::to_underlying(intersection);
+    }
+
+    void initPipeline(IntersectionType intersection) {
+        const uint32_t i = getIndex(intersection);
+        const std::string file = getShaderFile(intersection);
+        std::vector<VkDeviceSize> bufferSizes;
+
+        switch(intersection)
+        {
+            case IntersectionType::SphereSphere:
+                bufferSizes = {sizeof(SpherePair) * BUFFEROBJECTS, sizeof(GpuContact) * BUFFEROBJECTS};
+                m_computePipelines[i] = m_vulkanHandler.createPipeline(file, bufferSizes);
+                return;
+            case IntersectionType::CapsuleCapsule:
+                bufferSizes = {sizeof(CapsulePair) * BUFFEROBJECTS, sizeof(GpuContact) * BUFFEROBJECTS};
+                m_computePipelines[i] = m_vulkanHandler.createPipeline(file, bufferSizes);
+                return;
+            case IntersectionType::CapsuleSphere:
+                bufferSizes = {sizeof(CapsuleSpherePair) * BUFFEROBJECTS, sizeof(GpuContact) * BUFFEROBJECTS};
+                m_computePipelines[i] = m_vulkanHandler.createPipeline(file, bufferSizes);
+                return;
+            default:
+                throw std::runtime_error("Intersection does not exist");
+        }
+        
+    }
+
 };
 
 template <typename Bv>
@@ -146,20 +178,17 @@ GpuBackend<Bv>::GpuBackend(VkPhysicalDevice& physicalDevice) : m_vulkanHandler(p
     test = 1;
 
     m_vulkanHandler.createLogicalDevice();
-}
 
-template <typename Bv>
-void GpuBackend<Bv>::initPipeline(){
-    
-    std::vector<VkDeviceSize> bufferSizes = {sizeof(GpuSphere) * BUFFEROBJECTS*2, sizeof(GpuContact) * BUFFEROBJECTS};
-    std::vector<VkDeviceSize> bufferSizes2 = {sizeof(GpuCapsule) * BUFFEROBJECTS*2, sizeof(GpuContact) * BUFFEROBJECTS};
-    
-    m_computePipelines.push_back(m_vulkanHandler.createPipeline(SHADERFILES.at(IntersectionTest::SphereSphere), bufferSizes));
-    m_computePipelines.push_back(m_vulkanHandler.createPipeline(SHADERFILES.at(IntersectionTest::CapsuleCapsule), bufferSizes2));
-    
+    m_computePipelines.resize(SHADERCOUNT);
+    initPipeline(IntersectionType::SphereSphere);
+    initPipeline(IntersectionType::CapsuleCapsule);
+    initPipeline(IntersectionType::CapsuleSphere);
+
+    m_pairs.resize(SHADERCOUNT);
+
     m_vulkanHandler.createCommandPool();
-
 }
+
 
 template <typename Bv>
 void GpuBackend<Bv>::queryBoxes() {
@@ -169,43 +198,68 @@ void GpuBackend<Bv>::queryBoxes() {
 }
 
 template <typename Bv>
-void GpuBackend<Bv>::querySpheres() {
+std::vector<GpuContact> GpuBackend<Bv>::querySpheres() {
     
     test = m_spheres.size();
-    VkDeviceSize bufferSizeIn = sizeof(GpuSphere) * BUFFEROBJECTS*2;
-    
-    m_contacts.resize(BUFFEROBJECTS);
-    
-    VkDeviceSize bufferSizeIn2 = sizeof(GpuCapsule) * BUFFEROBJECTS*2;
 
-    m_contacts2.resize(BUFFEROBJECTS);
+    std::vector<GpuContact> results = {};
 
     m_vulkanHandler.startRecordingCommandBuffer();
-    m_vulkanHandler.recordCommandBuffer(&m_spheres[0], bufferSizeIn, m_spheres.size()/2, m_computePipelines[0]);
-    m_vulkanHandler.recordCommandBuffer(&m_capsules[0], bufferSizeIn2, m_capsules.size()/2, m_computePipelines[1]);
+    m_vulkanHandler.recordCommandBuffer(&m_spheres[0], m_spheres.size()/2, m_computePipelines[0]);
+    m_vulkanHandler.recordCommandBuffer(&m_capsules[0], m_capsules.size()/2, m_computePipelines[1]);
     m_vulkanHandler.runComputeShader();
-    m_vulkanHandler.getResults(&m_contacts[0], m_computePipelines[0]);
-    m_vulkanHandler.getResults(&m_contacts2[0], m_computePipelines[1]);
+
+    std::vector<GpuContact> contacts;
+    contacts.resize(BUFFEROBJECTS);
+    m_vulkanHandler.getResults(&contacts[0], m_computePipelines[0]);
+    contacts.resize(m_spheres.size()/2);
+    results.insert(results.end(), contacts.begin(), contacts.end());
+
+    contacts.resize(BUFFEROBJECTS);
+    m_vulkanHandler.getResults(&contacts[0], m_computePipelines[1]);
+    contacts.resize(m_capsules.size()/2);
+    results.insert(results.end(), contacts.begin(), contacts.end());
+
+    return results;
 
 }
 
 template <typename Bv>
-void GpuBackend<Bv>::query() {
+CollisionResult GpuBackend<Bv>::query() {
 
-    VkDeviceSize bufferSizeIn = sizeof(GpuSphere) * m_spheres.size();
-    m_vulkanHandler.recordCommandBuffer(&m_spheres[0], bufferSizeIn, m_spheres.size(), m_computePipelines[0]);
+    m_vulkanHandler.startRecordingCommandBuffer();
+    
+    std::vector<CollisionPair> results = {};
 
-    VkDeviceSize bufferSizeOut = sizeof(GpuContact) * (m_spheres.size()/2);
+    //throw std::runtime_error(std::to_string(m_pairs[0].size()));
 
-    std::vector<GpuContact> contacts;
-    contacts.resize(m_spheres.size()/2);
-    /*
-    for (const auto intersectiontest : IntersectionTest::All){
-        uint32_t i = static_cast<uint32_t>(intersectiontest);
-
-
+    for(uint32_t i=0; i < m_pairs.size(); i++){
+        if(m_pairs[i].size() != 0){
+            m_vulkanHandler.recordCommandBuffer(&m_pairs[i][0], m_pairs[i].size(), m_computePipelines[i]);
+        }
     }
-    */
+
+    m_vulkanHandler.runComputeShader();
+    
+    std::vector<GpuContact> contacts;
+    for (uint32_t i=0; i < m_computePipelines.size(); i++) {
+        if(m_pairs[i].size() != 0){
+            contacts.resize(BUFFEROBJECTS);
+            m_vulkanHandler.getResults(&contacts[0], m_computePipelines[i]);
+            contacts.resize(m_pairs[i].size());
+        }
+        for(uint32_t j=0; j < contacts.size(); j++){
+            if(contacts[j].hasContact) {
+                Contact contact{contacts[j].normal, contacts[j].depth, contacts[j].witnessA, contacts[j].witnessB};
+                InstanceHandle handleA = m_instanceHandles.find(contacts[j].idA)->second;
+                InstanceHandle handleB = m_instanceHandles.find(contacts[j].idB)->second;
+                results.push_back(CollisionPair{handleA, handleB, contact});
+            }
+        }
+        
+    }
+
+    return CollisionResult{results};
 }
 
 template <typename Bv>
@@ -227,40 +281,53 @@ GeometryHandle GpuBackend<Bv>::defineAaBox(Vec3 halfExtents) {
 }
 
 template <typename Bv>
-GeometryHandle GpuBackend<Bv>::defineSphere(real radius, Vec3 center) {
+GeometryHandle GpuBackend<Bv>::defineSphere(real radius, Vec3 center, InstanceHandle handle) {
+    m_instanceHandles.insert_or_assign(handle.getId(), handle);
     return addShape(
         m_sphereRegistry,
         m_spheres,
-        GpuSphere{Terathon::Sphere3D{-1.0, center.x, center.y, center.z, -((center.x*center.x + center.y*center.y + center.z*center.z) - radius * radius) * 0.5f}});
+        GpuSphere{handle.getId(), Terathon::Sphere3D{-1.0, center.x, center.y, center.z, -((center.x*center.x + center.y*center.y + center.z*center.z) - radius * radius) * 0.5f}});
 }
 
 template <typename Bv>
-GeometryHandle GpuBackend<Bv>::defineCapsule(real radius, Vec3 a, Vec3 b) {
+GeometryHandle GpuBackend<Bv>::defineCapsule(real radius, Vec3 a, Vec3 b, InstanceHandle handle) {
+    m_instanceHandles.insert_or_assign(handle.getId(), handle);
     return addShape(
         m_capsuleRegistry,
         m_capsules,
-        GpuCapsule{a,b,radius});
+        GpuCapsule{handle.getId(),Terathon::Point3D{a.x,a.y,a.z},Terathon::Point3D{b.x,b.y,b.z},radius});
 }
 
 
 template <typename Bv>
-uint32_t GpuBackend<Bv>::addPair(const vgeo::internal::cpu::Sphere& sphereA, const vgeo::internal::cpu::Sphere& sphereB){
-    uint32_t index = m_spherePairs.size();
-    m_spherePairs.push_back(SpherePair{GpuSphere{sphereA.getSphere()}, GpuSphere{sphereB.getSphere()}});
-    return index;
+void GpuBackend<Bv>::addPair(InstanceHandle handleA, const vgeo::internal::cpu::Sphere& sphereA, InstanceHandle handleB, const vgeo::internal::cpu::Sphere& sphereB){
+    m_instanceHandles.insert_or_assign(handleA.getId(), handleA);
+    m_instanceHandles.insert_or_assign(handleB.getId(), handleB);
+
+    uint32_t i = getIndex(IntersectionType::SphereSphere);
+    m_pairs[i].push_back(SpherePair{GpuSphere{handleA.getId(), sphereA.getSphere()}, GpuSphere{handleB.getId(), sphereB.getSphere()}});
 }
 
 template <typename Bv>
-uint32_t GpuBackend<Bv>::addPair(const vgeo::internal::cpu::Capsule& capsule1, const vgeo::internal::cpu::Capsule& capsule2){
-    uint32_t index = m_capsulePairs.size();
-    Terathon::Point3D a1 = capsule1.getA();
-    Terathon::Point3D b1 = capsule1.getB();
-    Terathon::Point3D a2 = capsule2.getA();
-    Terathon::Point3D b2 = capsule2.getB();
+void GpuBackend<Bv>::addPair(InstanceHandle handleA, const vgeo::internal::cpu::Capsule& capsuleA, InstanceHandle handleB, const vgeo::internal::cpu::Capsule& capsuleB){
+    m_instanceHandles.insert_or_assign(handleA.getId(), handleA);
+    m_instanceHandles.insert_or_assign(handleB.getId(), handleB);
 
-    m_capsulePairs.push_back(CapsulePair{GpuCapsule{{a1.x,a1.y,a1.z}, {b1.x,b1.y,b1.z}, capsule1.getRadius()}, 
-                                            GpuCapsule{{a2.x,a2.y,a2.z}, {b2.x,b2.y,b2.z}, capsule2.getRadius()}});
-    return index;
+    uint32_t i = getIndex(IntersectionType::CapsuleCapsule);
+    m_pairs[i].push_back(CapsulePair{GpuCapsule{handleA.getId(), capsuleA.getA(), capsuleA.getB(), capsuleA.getRadius()}, 
+                                            GpuCapsule{handleB.getId(), capsuleB.getA(), capsuleB.getB(), capsuleB.getRadius()}});
+
+}
+
+template <typename Bv>
+void GpuBackend<Bv>::addPair(InstanceHandle handleA, const vgeo::internal::cpu::Capsule& capsule, InstanceHandle handleB, const vgeo::internal::cpu::Sphere& sphere){
+    m_instanceHandles.insert_or_assign(handleA.getId(), handleA);
+    m_instanceHandles.insert_or_assign(handleB.getId(), handleB);
+
+    uint32_t i = getIndex(IntersectionType::CapsuleSphere);
+    m_pairs[i].push_back(CapsuleSpherePair{GpuCapsule{handleA.getId(), capsule.getA(), capsule.getB(), capsule.getRadius()}, 
+                                            GpuSphere{handleB.getId(), sphere.getSphere()}});
+
 }
 
 template <typename Bv>
