@@ -10,11 +10,10 @@ struct StorageBuffer {
     VkDeviceSize m_bufferSize;
     void* m_data;
 
-    void cleanup(VkDevice logicalDevice){
-        vkDestroyBuffer(logicalDevice, m_buffer, nullptr);
-        vkFreeMemory(logicalDevice, m_bufferMemory, nullptr);
+    void cleanup(VkDevice& device){
+        vkDestroyBuffer(device, m_buffer, nullptr);
+        vkFreeMemory(device, m_bufferMemory, nullptr);
     }
-
 };
 
 }

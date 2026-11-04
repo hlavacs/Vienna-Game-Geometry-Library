@@ -188,133 +188,6 @@ void VulkanHandler::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceS
     endSingleTimeCommands(commandBuffer);
 }
 
-ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const std::vector<VkDeviceSize>& bufferSizes){
-
-    VkDescriptorSetLayout descriptorSetLayout = createDescriptorSetLayout();
-    
-    std::vector<StorageBuffer> storageBuffers;
-    
-    for (VkDeviceSize bufferSize : bufferSizes){
-        storageBuffers.push_back(createStorageBuffer(bufferSize));
-    }
-
-    VkDescriptorPool descriptorPool = createDescriptorPool(bufferSizes.size());
-
-    VkDescriptorSet descriptorSet;
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &descriptorSetLayout;
-
-    if (vkAllocateDescriptorSets(m_logicalDevice, &allocInfo, &descriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
-    }
-
-    std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-    VkDescriptorBufferInfo inputStoragebufferInfo{};
-    inputStoragebufferInfo.buffer = storageBuffers[0].m_buffer;
-    inputStoragebufferInfo.offset = 0;
-    inputStoragebufferInfo.range = storageBuffers[0].m_bufferSize;
-
-    descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[0].dstSet = descriptorSet;
-    descriptorWrites[0].dstBinding = 0;
-    descriptorWrites[0].dstArrayElement = 0;
-    descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrites[0].descriptorCount = 1;
-    descriptorWrites[0].pBufferInfo = &inputStoragebufferInfo;
-
-    VkDescriptorBufferInfo outputBufferInfo{};
-    outputBufferInfo.buffer = storageBuffers[1].m_buffer;
-    outputBufferInfo.offset = 0;
-    outputBufferInfo.range = storageBuffers[1].m_bufferSize;
-
-    descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[1].dstSet = descriptorSet;
-    descriptorWrites[1].dstBinding = 1;
-    descriptorWrites[1].dstArrayElement = 0;
-    descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descriptorWrites[1].descriptorCount = 1;
-    descriptorWrites[1].pBufferInfo = &outputBufferInfo;
-
-    vkUpdateDescriptorSets(m_logicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-
-    VkPushConstantRange pushConstantRange;
-
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(uint32_t);
-
-    VkPipelineLayout pipelineLayout;
-
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-
-    if (vkCreatePipelineLayout(m_logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline layout!");
-    }
-
-    VkPipeline computePipeline;
-
-    auto code = readFile(filename);
-    if(code.empty()){
-        throw std::runtime_error("Code is empty!");
-    }
-    VkShaderModule shaderModule = createShaderModule(code);
-
-    VkPipelineShaderStageCreateInfo shaderStage{};
-    shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    shaderStage.module = shaderModule;
-    shaderStage.pName = "main";
-
-    VkComputePipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pipelineInfo.stage = shaderStage;
-    pipelineInfo.layout = pipelineLayout;
-
-    if (vkCreateComputePipelines(m_logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &computePipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create compute pipeline!");
-    }
-    
-
-    return ComputePipeline{descriptorSetLayout, descriptorPool, descriptorSet, storageBuffers[0], storageBuffers[1], pipelineLayout, computePipeline};
-}
-
-VkDescriptorSetLayout VulkanHandler::createDescriptorSetLayout(){
-
-    VkDescriptorSetLayout descriptorSetLayout;
-    std::array<VkDescriptorSetLayoutBinding, 2> layoutBindings{};
-    layoutBindings[0].binding = 0;
-    layoutBindings[0].descriptorCount = 1;
-    layoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    layoutBindings[0].pImmutableSamplers = nullptr;
-    layoutBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-
-    layoutBindings[1].binding = 1;
-    layoutBindings[1].descriptorCount = 1;
-    layoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    layoutBindings[1].pImmutableSamplers = nullptr;
-    layoutBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 2;
-    layoutInfo.pBindings = layoutBindings.data();
-
-    if (vkCreateDescriptorSetLayout(m_logicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor set layout!");
-    }
-    return descriptorSetLayout;
-}
-
 StorageBuffer VulkanHandler::createStorageBuffer(VkDeviceSize bufferSize) {
 
     VkBuffer buffer;
@@ -329,28 +202,25 @@ StorageBuffer VulkanHandler::createStorageBuffer(VkDeviceSize bufferSize) {
     return StorageBuffer{buffer, bufferMemory, bufferSize, data};
 }
 
-VkDescriptorPool VulkanHandler::createDescriptorPool(uint32_t bufferCount){
 
-    VkDescriptorPool descriptorPool;
-    std::vector<VkDescriptorPoolSize> poolSizes;
+ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const std::vector<VkDeviceSize>& bufferSizes){
 
-    for(uint32_t i=0; i < bufferCount; i++){
-        poolSizes.push_back(VkDescriptorPoolSize{
-            .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = 1
-        });
+    std::vector<StorageBuffer> storageBuffers;
+    
+    for (VkDeviceSize bufferSize : bufferSizes){
+        storageBuffers.push_back(createStorageBuffer(bufferSize));
     }
 
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 2;
-
-    if (vkCreateDescriptorPool(m_logicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor pool!");
+    auto code = readFile(filename);
+    if(code.empty()){
+        throw std::runtime_error("Code is empty!");
     }
-    return descriptorPool;
+    VkShaderModule shaderModule = createShaderModule(code);
+
+    ComputePipeline pipeline;
+    pipeline.initComputePipeline(m_logicalDevice, shaderModule, storageBuffers);
+    return pipeline;
+
 }
 
 
@@ -365,15 +235,17 @@ void VulkanHandler::startRecordingCommandBuffer(){
 
 }
 
-void VulkanHandler::recordCommandBuffer(void* inputData, uint32_t inputDataSize, ComputePipeline pipeline) {
 
-    memcpy(pipeline.m_inputBuffers.m_data, inputData, (size_t)pipeline.m_inputBuffers.m_bufferSize);
 
-    vkCmdPushConstants(m_commandBuffer, pipeline.m_pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &inputDataSize);
-    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.m_computePipeline);
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.m_pipelineLayout, 0, 1, &pipeline.m_descriptorSet, 0, 0);
+void VulkanHandler::recordCommandBuffer(void* inputData, uint32_t inputDataSize, ComputePipeline& pipeline) {
 
-    uint32_t groupCount = (pipeline.m_inputBuffers.m_bufferSize + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
+    memcpy(pipeline.getBuffer(0).m_data, inputData, (size_t)pipeline.getBuffer(0).m_bufferSize);
+
+    vkCmdPushConstants(m_commandBuffer, pipeline.getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &inputDataSize);
+    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getPipeline());
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getPipelineLayout(), 0, 1, &pipeline.getDescriptorSet(), 0, 0);
+
+    uint32_t groupCount = (inputDataSize + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
     vkCmdDispatch(m_commandBuffer, groupCount, 1, 1);
 
 }
@@ -395,29 +267,19 @@ void VulkanHandler::runComputeShader(){
     vkQueueWaitIdle(m_computeQueue);
 }
 
-void VulkanHandler::getResults(void* result, ComputePipeline pipeline){
+void VulkanHandler::getResults(void* result, ComputePipeline& pipeline){
 
-    memcpy(result, pipeline.m_outputBuffer.m_data, pipeline.m_outputBuffer.m_bufferSize);
+    memcpy(result, pipeline.getOutputBuffer().m_data, pipeline.getOutputBuffer().m_bufferSize);
 }
 
 
 void VulkanHandler::cleanup(std::vector<ComputePipeline> pipelines) {
 
     for (ComputePipeline pipeline : pipelines){
-        vkDestroyPipeline(m_logicalDevice, pipeline.m_computePipeline, nullptr);
-        vkDestroyPipelineLayout(m_logicalDevice, pipeline.m_pipelineLayout, nullptr);
-
-        pipeline.m_inputBuffers.cleanup(m_logicalDevice);
-        pipeline.m_outputBuffer.cleanup(m_logicalDevice);
-
-        vkDestroyDescriptorPool(m_logicalDevice, pipeline.m_descriptorPool, nullptr);
-
-        vkDestroyDescriptorSetLayout(m_logicalDevice, pipeline.m_descriptorSetLayout, nullptr);
+        pipeline.cleanup(m_logicalDevice);
     }
 
-
     vkDestroyCommandPool(m_logicalDevice, m_commandPool, nullptr);
-
     vkDestroyDevice(m_logicalDevice, nullptr);
 
 }

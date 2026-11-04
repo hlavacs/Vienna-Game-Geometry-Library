@@ -1,7 +1,5 @@
 #pragma once
 
-#include <set>
-
 #include "vgeo/CollisionResult.hpp"
 #include "vgeo/GeometryHandle.hpp"
 #include "vgeo/RayResult.hpp"
@@ -21,6 +19,8 @@
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
 #include "vgeo/internal/cpu/shapes/Capsule.hpp"
 
+#define BUFFEROBJECTS 64
+
 namespace vgeo::internal::gpu {
 
 struct AABB {
@@ -38,7 +38,7 @@ struct AABB {
 template <typename Bv>
 class GpuBackend {
 
-    const uint32_t BUFFEROBJECTS = 64;
+    //const uint32_t BUFFEROBJECTS = 64;
     const uint32_t SHADERCOUNT = 3;
     VulkanHandler                      m_vulkanHandler;
     GeometryRegistry<ShapeType::AaBox> m_aaBoxRegistry;
@@ -61,7 +61,7 @@ public:
     Bv                 m_boundingVolume;
     std::vector<AaBox> m_testBoxes;
     std::vector<GpuContact> m_contacts;
-    std::vector<GpuContact> m_contacts2;
+
     GpuBackend(VkPhysicalDevice& physicalDevice);
     void initPipeline();
     void queryBoxes();
@@ -171,6 +171,15 @@ private:
         
     }
 
+    void addShapePair(InstanceHandle handleA, InstanceHandle handleB, IntersectionType intersection, ShapePair pair){
+        m_instanceHandles.insert_or_assign(handleA.getId(), handleA);
+        m_instanceHandles.insert_or_assign(handleB.getId(), handleB);
+
+        uint32_t i = getIndex(intersection);
+        m_pairs[i].push_back(pair);
+    }
+
+    
 };
 
 template <typename Bv>
@@ -230,8 +239,6 @@ CollisionResult GpuBackend<Bv>::query() {
     m_vulkanHandler.startRecordingCommandBuffer();
     
     std::vector<CollisionPair> results = {};
-
-    //throw std::runtime_error(std::to_string(m_pairs[0].size()));
 
     for(uint32_t i=0; i < m_pairs.size(); i++){
         if(m_pairs[i].size() != 0){
@@ -301,33 +308,25 @@ GeometryHandle GpuBackend<Bv>::defineCapsule(real radius, Vec3 a, Vec3 b, Instan
 
 template <typename Bv>
 void GpuBackend<Bv>::addPair(InstanceHandle handleA, const vgeo::internal::cpu::Sphere& sphereA, InstanceHandle handleB, const vgeo::internal::cpu::Sphere& sphereB){
-    m_instanceHandles.insert_or_assign(handleA.getId(), handleA);
-    m_instanceHandles.insert_or_assign(handleB.getId(), handleB);
 
-    uint32_t i = getIndex(IntersectionType::SphereSphere);
-    m_pairs[i].push_back(SpherePair{GpuSphere{handleA.getId(), sphereA.getSphere()}, GpuSphere{handleB.getId(), sphereB.getSphere()}});
+   addShapePair(handleA, handleB, IntersectionType::SphereSphere, 
+        SpherePair{GpuSphere{handleA.getId(), sphereA.getSphere()}, GpuSphere{handleB.getId(), sphereB.getSphere()}});
 }
 
 template <typename Bv>
 void GpuBackend<Bv>::addPair(InstanceHandle handleA, const vgeo::internal::cpu::Capsule& capsuleA, InstanceHandle handleB, const vgeo::internal::cpu::Capsule& capsuleB){
-    m_instanceHandles.insert_or_assign(handleA.getId(), handleA);
-    m_instanceHandles.insert_or_assign(handleB.getId(), handleB);
 
-    uint32_t i = getIndex(IntersectionType::CapsuleCapsule);
-    m_pairs[i].push_back(CapsulePair{GpuCapsule{handleA.getId(), capsuleA.getA(), capsuleA.getB(), capsuleA.getRadius()}, 
-                                            GpuCapsule{handleB.getId(), capsuleB.getA(), capsuleB.getB(), capsuleB.getRadius()}});
-
+    addShapePair(handleA, handleB, IntersectionType::CapsuleCapsule, 
+        CapsulePair{GpuCapsule{handleA.getId(), capsuleA.getA(), capsuleA.getB(), capsuleA.getRadius()}, 
+                    GpuCapsule{handleB.getId(), capsuleB.getA(), capsuleB.getB(), capsuleB.getRadius()}});
 }
 
 template <typename Bv>
 void GpuBackend<Bv>::addPair(InstanceHandle handleA, const vgeo::internal::cpu::Capsule& capsule, InstanceHandle handleB, const vgeo::internal::cpu::Sphere& sphere){
-    m_instanceHandles.insert_or_assign(handleA.getId(), handleA);
-    m_instanceHandles.insert_or_assign(handleB.getId(), handleB);
 
-    uint32_t i = getIndex(IntersectionType::CapsuleSphere);
-    m_pairs[i].push_back(CapsuleSpherePair{GpuCapsule{handleA.getId(), capsule.getA(), capsule.getB(), capsule.getRadius()}, 
-                                            GpuSphere{handleB.getId(), sphere.getSphere()}});
-
+    addShapePair(handleA, handleB, IntersectionType::CapsuleSphere, 
+        CapsuleSpherePair{GpuCapsule{handleA.getId(), capsule.getA(), capsule.getB(), capsule.getRadius()}, 
+                        GpuSphere{handleB.getId(), sphere.getSphere()}});
 }
 
 template <typename Bv>
@@ -336,3 +335,5 @@ void GpuBackend<Bv>::cleanup() {
 }
 
 }
+
+#undef BUFFEROBJECTS

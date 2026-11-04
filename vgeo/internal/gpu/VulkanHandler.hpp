@@ -29,17 +29,18 @@ class VulkanHandler{
         ComputePipeline createPipeline(const std::string& filename, const std::vector<VkDeviceSize>& bufferSizes);
         void createCommandPool();
         void startRecordingCommandBuffer();
-        void recordCommandBuffer(void* inputData, uint32_t inputDataSize, ComputePipeline pipeline);
+        void recordCommandBuffer(void* inputData, uint32_t inputDataSize, ComputePipeline& pipeline);
         void runComputeShader();
-        void getResults(void* result, ComputePipeline pipeline);
+        void getResults(void* result, ComputePipeline& pipeline);
         void cleanup(std::vector<ComputePipeline> pipelines);
 
 
     private:
 
         StorageBuffer createStorageBuffer(VkDeviceSize bufferSize);
-        VkDescriptorSetLayout createDescriptorSetLayout();
+        VkDescriptorSetLayout createDescriptorSetLayout(const uint32_t bindingCount);
         VkDescriptorPool createDescriptorPool(uint32_t bufferCount);
+        void writeDescriptorSet(VkDescriptorSet& descriptorSet, std::vector<StorageBuffer>& storageBuffers);
 
         uint32_t findComputeQueueFamilyIndex();
         VkShaderModule createShaderModule(const std::vector<char>& code);

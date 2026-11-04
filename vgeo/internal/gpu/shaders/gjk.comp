@@ -1,0 +1,26 @@
+#version 450
+
+#extension GL_ARB_shading_language_include : enable
+
+#include "shader_terathon.h"
+#include "contact.h"
+
+layout(push_constant) uniform PushConstants {
+    uint N;
+} pc;
+
+layout(std430, binding = 0) readonly buffer inBufferPoints{
+    Point3D points_in[];
+};
+
+layout(std430, binding = 1) readonly buffer inBufferIndices{
+    vec2 indices_in[];
+};
+
+layout(std430, binding = 2) buffer outBuffer{
+    Contact contacts[];
+};
+
+void main() {
+
+}
