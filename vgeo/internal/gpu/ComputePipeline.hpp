@@ -1,51 +1,81 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+
+#include <TSMotor3D.h>
+
 #include "StorageBuffer.hpp"
+#include "vgeo/ShapeType.hpp"
+#include "vgeo/internal/gpu/shapes/GpuContact.hpp"
+
+#include <vector>
+#include <stdexcept>
+#include <array>
+#include <functional>
+#include <cassert>
+#include <algorithm>
+#include<iostream>
 
 namespace vgeo::internal::gpu{
 
+struct CollisionTestPairData {
+    uint32_t typeA;
+    uint32_t typeB;
+    uint32_t indexA;
+    uint32_t indexB;
+    uint64_t instanceHandleA;
+    uint64_t instanceHandleB;
+    uint32_t sizeA;
+    uint32_t sizeB;
+    Terathon::Motor3D motorA;
+    Terathon::Motor3D motorB;
+};
+
 class ComputePipeline {
-    VkDescriptorSetLayout m_descriptorSetLayout;
+
+    std::vector<ShapeType> m_structure;
+    std::vector<CollisionTestPairData> m_calcData;
+    std::array<VkDescriptorSetLayout, 2> m_descriptorSetLayouts{};
     VkDescriptorPool m_descriptorPool;
-    VkDescriptorSet m_descriptorSet;
-    std::vector<StorageBuffer> m_storageBuffers;
+    std::array<VkDescriptorSet, 2> m_descriptorSets;
+    std::vector<std::reference_wrapper<GpuStorageBuffer>> m_gpuBuffers;
+    StorageBuffer m_calcDataBuffer;
+    StorageBuffer m_outputBuffer;
+    uint32_t m_bufferCount;
     VkPipelineLayout m_pipelineLayout;
     VkPipeline m_computePipeline;
 
     public:
-        ComputePipeline() = default;
-        ComputePipeline(VkDescriptorSetLayout dslayout, VkDescriptorPool pool, VkDescriptorSet set, std::vector<StorageBuffer> buffers, VkPipelineLayout pllayout, VkPipeline pipeline) 
-            : m_descriptorSetLayout{dslayout}, m_descriptorPool{pool}, m_descriptorSet{set}, m_storageBuffers{buffers}, m_pipelineLayout{pllayout}, m_computePipeline{pipeline} {}
+        ComputePipeline(std::vector<ShapeType> s) : m_structure{s}{}
 
-        void initComputePipeline(VkDevice& device, VkShaderModule& shaderModule, const std::vector<StorageBuffer>& buffers){
+        void initComputePipeline(VkDevice& device, VkShaderModule& shaderModule, const std::vector<std::reference_wrapper<GpuStorageBuffer>>& gpuBuffers, 
+            const StorageBuffer calcDataBuffer, const StorageBuffer outputBuffer)
+            {
+            assert(gpuBuffers.size() == m_structure.size());
+
+            m_bufferCount = gpuBuffers.size()+2;
+
+            createDescriptorSetLayout(device, gpuBuffers.size(), 0);
+
+            createDescriptorSetLayout(device, 2, 1);
+
+            m_gpuBuffers = gpuBuffers;
+            m_calcDataBuffer = calcDataBuffer;
+            m_outputBuffer = outputBuffer;
             
-            VkDescriptorSetLayoutCreateInfo layoutInfo = createDescriptorSetLayoutInfo(buffers.size());
-            if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_descriptorSetLayout) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create descriptor set layout!");
-            }
-
-            m_storageBuffers = buffers;
-            
-            VkDescriptorPoolCreateInfo poolInfo = createDescriptorPoolInfo(buffers.size());
-
-            if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create descriptor pool!");
-            }
+            createDescriptorPool(device);
 
             VkDescriptorSetAllocateInfo allocInfo{};
             allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             allocInfo.descriptorPool = m_descriptorPool;
-            allocInfo.descriptorSetCount = 1;
-            allocInfo.pSetLayouts = &m_descriptorSetLayout;
+            allocInfo.descriptorSetCount = 2;
+            allocInfo.pSetLayouts = m_descriptorSetLayouts.data();
 
-            if (vkAllocateDescriptorSets(device, &allocInfo, &m_descriptorSet) != VK_SUCCESS) {
+            if (vkAllocateDescriptorSets(device, &allocInfo, m_descriptorSets.data()) != VK_SUCCESS) {
                 throw std::runtime_error("failed to allocate descriptor sets!");
             }
 
-            std::vector<VkWriteDescriptorSet> descriptorWrites = writeDescriptorSet(m_descriptorSet, m_storageBuffers);
-
-            vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+            updateAllDescriptorSets(device);
 
             VkPushConstantRange pushConstantRange;
 
@@ -55,8 +85,8 @@ class ComputePipeline {
 
             VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
             pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-            pipelineLayoutInfo.setLayoutCount = 1;
-            pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout;
+            pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_descriptorSetLayouts.size());
+            pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
             pipelineLayoutInfo.pushConstantRangeCount = 1;
             pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
@@ -79,39 +109,89 @@ class ComputePipeline {
                 throw std::runtime_error("failed to create compute pipeline!");
             }
         }
-       
-        
-        VkDescriptorSetLayout& getDescriptorSetLayout() {return m_descriptorSetLayout;}
-        VkDescriptorPool& getDescriptoPool() {return m_descriptorPool;}
-        VkDescriptorSet& getDescriptorSet() {return m_descriptorSet;}
-        StorageBuffer& getBuffer(const uint32_t index) {return m_storageBuffers[index];}
-        StorageBuffer& getOutputBuffer() {return m_storageBuffers[m_storageBuffers.size()-1];}
+
+        void updateDescriptor(VkDevice& device, ShapeType type){
+            uint32_t binding;
+            for(uint32_t i = 0; i < m_structure.size(); i++){
+                if(type == m_structure[i]){
+                    binding = i;
+                }
+            }
+
+            updateGpuDescriptor(device, m_gpuBuffers[binding].get(), binding);
+        }
+
+        std::vector<ShapeType> getStructure() {return m_structure;}
+        std::vector<CollisionTestPairData> getCalcData() {return m_calcData;}
+        uint32_t getCalcDataSize() {return m_calcData.size();}
+        std::array<VkDescriptorSet, 2>& getDescriptorSets() {return m_descriptorSets;}
+        std::vector<std::reference_wrapper<GpuStorageBuffer>> getGpuBuffers(){return m_gpuBuffers;}
+        GpuStorageBuffer& getGpuBuffer(const uint32_t index) {return m_gpuBuffers[index];}
+        StorageBuffer& getCalcDataBuffer() {return m_calcDataBuffer;}
+        StorageBuffer& getOutputBuffer() {return m_outputBuffer;}
         VkPipelineLayout& getPipelineLayout() {return m_pipelineLayout;}
         VkPipeline& getPipeline() {return m_computePipeline;}
 
+        bool referencesBuffer(ShapeType type){
+            return std::any_of(m_structure.begin(), m_structure.end(), [type](ShapeType m_s) {return type == m_s;});
+        }
+
+        //checks if Pipeline contains the correct buffers
+        bool checkStructure(std::vector<ShapeType>& structure){
+            std::vector<bool> result;
+            if(m_structure.size() == structure.size()){
+                for(auto& s : structure){
+                    if(referencesBuffer(s)){
+                        result.push_back(true);
+                    }
+                    else{
+                        result.push_back(false);
+                    }
+                }
+            }
+            else{
+                return false;
+            }
+            return std::all_of(result.begin(), result.end(), [](bool b) {return b;});
+        }
+
+        void addCollisionPair(CollisionTestPairData pair){    
+            m_calcData.push_back(pair);
+        }
+
+        void resetCalcData(){
+            m_calcData.resize(0);
+        }
+
+        void copyCalcDataToBuffer(){
+            VkDeviceSize inputDataSize = m_calcData.size() * sizeof(CollisionTestPairData);
+            memcpy(m_calcDataBuffer.m_data, m_calcData.data(), (size_t)inputDataSize);
+        }
+
         void getResults(void* result){
-            memcpy(result, getOutputBuffer().m_data, getOutputBuffer().m_bufferSize);
+            VkDeviceSize outputDataSize = m_calcData.size() * sizeof(GpuContact);
+            memcpy(result, m_outputBuffer.m_data, outputDataSize);
         }
 
         void cleanup(VkDevice& device){
             vkDestroyPipeline(device, m_computePipeline, nullptr);
             vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
-            
-            for(StorageBuffer buffer : m_storageBuffers){
-                buffer.cleanup(device);
-            }
+
+            m_calcDataBuffer.cleanup(device);
+            m_outputBuffer.cleanup(device);
 
             vkDestroyDescriptorPool(device, m_descriptorPool, nullptr);
-            vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
+            vkDestroyDescriptorSetLayout(device, m_descriptorSetLayouts[0], nullptr);
+            vkDestroyDescriptorSetLayout(device, m_descriptorSetLayouts[1], nullptr);
         }
 
     private:
 
-    VkDescriptorSetLayoutCreateInfo createDescriptorSetLayoutInfo(const uint32_t bindingCount){
+    void createDescriptorSetLayout(VkDevice& device, uint32_t bindings, uint32_t layoutIndex){
 
         std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
-        layoutBindings.resize(bindingCount);
-        for(uint32_t i=0; i<bindingCount; i++){
+        layoutBindings.resize(bindings);
+        for(uint32_t i=0; i < bindings; i++){
             layoutBindings[i].binding = i;
             layoutBindings[i].descriptorCount = 1;
             layoutBindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -121,57 +201,102 @@ class ComputePipeline {
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = bindingCount;
+        layoutInfo.bindingCount = bindings;
         layoutInfo.pBindings = layoutBindings.data();
 
-        return layoutInfo;
+        if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_descriptorSetLayouts[layoutIndex]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor set layout!");
+        }
     }
 
-    VkDescriptorPoolCreateInfo createDescriptorPoolInfo(uint32_t bufferCount){
+    void createDescriptorPool(VkDevice device){
 
-        std::vector<VkDescriptorPoolSize> poolSizes;
-
-        for(uint32_t i=0; i < bufferCount; i++){
-            poolSizes.push_back(VkDescriptorPoolSize{
-                .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .descriptorCount = 1
-            });
-        }
+        VkDescriptorPoolSize poolSize{};
+        poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSize.descriptorCount = m_bufferCount;
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.poolSizeCount = 1;
+        poolInfo.pPoolSizes = &poolSize;
         poolInfo.maxSets = 2;
 
-        return poolInfo;
+        if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create descriptor pool!");
+        }
+    }
+
+    void updateGpuDescriptor(VkDevice& device, const GpuStorageBuffer& buffer, uint32_t binding){
+        VkWriteDescriptorSet descriptorWrite;
+        VkDescriptorBufferInfo bufferInfo;
+
+        bufferInfo.buffer = buffer.m_buffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = buffer.m_bufferSize;
+
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet = m_descriptorSets[0];
+        descriptorWrite.dstBinding = binding;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = &bufferInfo;
+
+        vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
     }
     
-    std::vector<VkWriteDescriptorSet> writeDescriptorSet(VkDescriptorSet& descriptorSet, std::vector<StorageBuffer>& storageBuffers){
+    void updateAllDescriptorSets(VkDevice& device){
     
         std::vector<VkWriteDescriptorSet> descriptorWrites;
-        descriptorWrites.resize(storageBuffers.size());
+        descriptorWrites.resize(m_bufferCount);
 
         std::vector<VkDescriptorBufferInfo> storageBufferInfos;
-        for(uint32_t i=0; i < storageBuffers.size(); i++){
+        for(uint32_t i=0; i < m_bufferCount; i++){
             storageBufferInfos.push_back(VkDescriptorBufferInfo{});
         }
 
-        for(uint32_t i=0; i < storageBuffers.size(); i++){
+        for(uint32_t i=0; i < m_gpuBuffers.size(); i++){
             
-            storageBufferInfos[i].buffer = storageBuffers[i].m_buffer;
+            storageBufferInfos[i].buffer = m_gpuBuffers[i].get().m_buffer;
             storageBufferInfos[i].offset = 0;
-            storageBufferInfos[i].range = storageBuffers[i].m_bufferSize;
+            storageBufferInfos[i].range = m_gpuBuffers[i].get().m_bufferSize;
 
             descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrites[i].dstSet = descriptorSet;
+            descriptorWrites[i].dstSet = m_descriptorSets[0];
             descriptorWrites[i].dstBinding = i;
             descriptorWrites[i].dstArrayElement = 0;
             descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             descriptorWrites[i].descriptorCount = 1;
             descriptorWrites[i].pBufferInfo = &storageBufferInfos[i];
         }
-        return descriptorWrites;
+
+        uint32_t currIndex = m_gpuBuffers.size();
+
+        storageBufferInfos[currIndex].buffer = m_calcDataBuffer.m_buffer;
+        storageBufferInfos[currIndex].offset = 0;
+        storageBufferInfos[currIndex].range = m_calcDataBuffer.m_bufferSize;
+
+        descriptorWrites[currIndex].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[currIndex].dstSet = m_descriptorSets[1];
+        descriptorWrites[currIndex].dstBinding = 0;
+        descriptorWrites[currIndex].dstArrayElement = 0;
+        descriptorWrites[currIndex].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptorWrites[currIndex].descriptorCount = 1;
+        descriptorWrites[currIndex].pBufferInfo = &storageBufferInfos[currIndex];
+
+        storageBufferInfos[currIndex+1].buffer = m_outputBuffer.m_buffer;
+        storageBufferInfos[currIndex+1].offset = 0;
+        storageBufferInfos[currIndex+1].range = m_outputBuffer.m_bufferSize;
+
+        descriptorWrites[currIndex+1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[currIndex+1].dstSet = m_descriptorSets[1];
+        descriptorWrites[currIndex+1].dstBinding = 1;
+        descriptorWrites[currIndex+1].dstArrayElement = 0;
+        descriptorWrites[currIndex+1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        descriptorWrites[currIndex+1].descriptorCount = 1;
+        descriptorWrites[currIndex+1].pBufferInfo = &storageBufferInfos[currIndex+1];
+
+        vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 
         

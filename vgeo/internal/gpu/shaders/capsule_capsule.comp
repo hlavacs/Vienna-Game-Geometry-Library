@@ -3,7 +3,7 @@
 #extension GL_ARB_shading_language_include : enable
 
 #include "shader_terathon.h"
-#include "contact.h"
+#include "vgeo.h"
 
 
 struct GpuCapsulePair{
@@ -17,11 +17,15 @@ layout(push_constant) uniform PushConstants {
     uint N;
 } pc;
 
-layout(std430, binding = 0) readonly buffer inBuffer{
-    GpuCapsulePair pair_in[];
+layout(std430, set = 0, binding = 0) readonly buffer capsuleBuffer{
+    Capsule capsules_in[];
 };
 
-layout(std430, binding = 1) buffer outBuffer{
+layout(std430, set = 1, binding = 0) readonly buffer inBuffer{
+    CollisionPairData pairData_in[];
+};
+
+layout(std430, set = 1, binding = 1) writeonly buffer outBuffer{
     Contact contacts[];
 };
 
@@ -32,11 +36,20 @@ void main() {
 
     if (index >= pc.N) return;
 
-    const vec2 id1 = pair_in[index].id1;
-    const vec2 id2 = pair_in[index].id2;
+    const uint indexA = pairData_in[index].indexA;
+    const uint indexB = pairData_in[index].indexB;
 
-    const Capsule capsule1 = pair_in[index].capsule1;
-    const Capsule capsule2 = pair_in[index].capsule2;
+    const vec2 id1 = pairData_in[index].instanceHandleA;
+    const vec2 id2 = pairData_in[index].instanceHandleB;
+
+    const Motor3D motorA = pairData_in[index].motorA;
+    const Motor3D motorB = pairData_in[index].motorB;
+
+    Capsule capsule1 = capsules_in[indexA];
+    Capsule capsule2 = capsules_in[indexB];
+
+    capsule1 = applyTransform(capsule1, motorA, 1.0);
+    capsule2 = applyTransform(capsule2, motorB, 1.0);
 
     Point3D a1 = capsule1.a;
     Point3D b1 = capsule1.b;

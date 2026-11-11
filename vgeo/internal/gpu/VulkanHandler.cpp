@@ -193,8 +193,7 @@ StorageBuffer VulkanHandler::createStorageBuffer(VkDeviceSize bufferSize) {
     VkBuffer buffer;
     VkDeviceMemory bufferMemory;
 
-    createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, bufferMemory);
+    createBuffer(bufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, bufferMemory);
     
     void* data;
     vkMapMemory(m_logicalDevice, bufferMemory, 0, bufferSize, 0, &data);
@@ -202,14 +201,61 @@ StorageBuffer VulkanHandler::createStorageBuffer(VkDeviceSize bufferSize) {
     return StorageBuffer{buffer, bufferMemory, bufferSize, data};
 }
 
+GpuStorageBuffer VulkanHandler::createGpuStorageBuffer(VkDeviceSize bufferSize){
+    VkBuffer gpuBuffer;
+    VkDeviceMemory gpuBufferMemory;
 
-ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const std::vector<VkDeviceSize>& bufferSizes){
+    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, gpuBuffer, gpuBufferMemory);
 
-    std::vector<StorageBuffer> storageBuffers;
+    return GpuStorageBuffer{gpuBuffer, gpuBufferMemory, bufferSize};
+}
+
+void VulkanHandler::updateGpuStorageBuffer(GpuStorageBuffer& buffer, void* inputData, uint32_t inputDataSize) {
+    assert(inputDataSize <= buffer.m_bufferSize);
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    createBuffer(inputDataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
     
-    for (VkDeviceSize bufferSize : bufferSizes){
-        storageBuffers.push_back(createStorageBuffer(bufferSize));
-    }
+    void* data;
+    vkMapMemory(m_logicalDevice, stagingBufferMemory, 0, inputDataSize, 0, &data);
+    memcpy(data, inputData, (size_t)inputDataSize);
+    vkUnmapMemory(m_logicalDevice, stagingBufferMemory);
+
+    copyBuffer(stagingBuffer, buffer.m_buffer, inputDataSize);
+
+    vkDestroyBuffer(m_logicalDevice, stagingBuffer, nullptr);
+    vkFreeMemory(m_logicalDevice, stagingBufferMemory, nullptr);
+}
+
+void VulkanHandler::growGpuStorageBuffer(GpuStorageBuffer& buffer){
+
+    VkBuffer oldBuffer = buffer.m_buffer;
+    VkDeviceMemory oldBufferMemory = buffer.m_bufferMemory;
+    VkDeviceSize oldBufferSize = buffer.m_bufferSize;
+
+    VkBuffer newBuffer;
+    VkDeviceMemory newBufferMemory;
+
+    VkDeviceSize newBufferSize = oldBufferSize * 2;
+
+    createBuffer(newBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, newBuffer, newBufferMemory);
+
+    copyBuffer(oldBuffer, newBuffer, oldBufferSize);
+
+    vkDestroyBuffer(m_logicalDevice, oldBuffer, nullptr);
+    vkFreeMemory(m_logicalDevice, oldBufferMemory, nullptr);
+
+    buffer.m_buffer = newBuffer;
+    buffer.m_bufferMemory = newBufferMemory;
+    buffer.m_bufferSize = newBufferSize;
+}
+
+ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const std::vector<std::reference_wrapper<GpuStorageBuffer>>& gpuStorageBuffers, std::vector<ShapeType> structure){
+
+    StorageBuffer calcDataStorageBuffer = createStorageBuffer(sizeof(CollisionTestPairData)*SHADER_LOCAL_SIZE_X);
+    StorageBuffer outputStorageBuffer = createStorageBuffer(sizeof(GpuContact)*SHADER_LOCAL_SIZE_X);
 
     auto code = readFile(filename);
     if(code.empty()){
@@ -217,35 +263,43 @@ ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const
     }
     VkShaderModule shaderModule = createShaderModule(code);
 
-    ComputePipeline pipeline;
-    pipeline.initComputePipeline(m_logicalDevice, shaderModule, storageBuffers);
-    return pipeline;
+    ComputePipeline pipeline{structure};
+    pipeline.initComputePipeline(m_logicalDevice, shaderModule, gpuStorageBuffers, calcDataStorageBuffer, outputStorageBuffer);
+    
+    vkDestroyShaderModule(m_logicalDevice, shaderModule, nullptr);
 
+    return pipeline;
 }
 
+void VulkanHandler::updateDescriptorBinding(ComputePipeline& pipeline, ShapeType type){
+    pipeline.updateDescriptor(m_logicalDevice, type);
+}
 
 void VulkanHandler::startRecordingCommandBuffer(){
-    
+
+    if (vkResetCommandBuffer(m_commandBuffer, 0) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
     if (vkBeginCommandBuffer(m_commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
-
 }
 
+void VulkanHandler::recordCommandBuffer(ComputePipeline& pipeline) {
 
+    pipeline.copyCalcDataToBuffer();
 
-void VulkanHandler::recordCommandBuffer(void* inputData, uint32_t inputDataSize, ComputePipeline& pipeline) {
+    uint32_t pushConstant = pipeline.getCalcDataSize();
 
-    memcpy(pipeline.getBuffer(0).m_data, inputData, (size_t)pipeline.getBuffer(0).m_bufferSize);
-
-    vkCmdPushConstants(m_commandBuffer, pipeline.getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &inputDataSize);
+    vkCmdPushConstants(m_commandBuffer, pipeline.getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &pushConstant);
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getPipeline());
-    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getPipelineLayout(), 0, 1, &pipeline.getDescriptorSet(), 0, 0);
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getPipelineLayout(), 0, 2, pipeline.getDescriptorSets().data(), 0, 0);
 
-    uint32_t groupCount = (inputDataSize + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
+    uint32_t groupCount = (pipeline.getCalcDataSize() + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
     vkCmdDispatch(m_commandBuffer, groupCount, 1, 1);
 
 }
@@ -267,18 +321,19 @@ void VulkanHandler::runComputeShader(){
     vkQueueWaitIdle(m_computeQueue);
 }
 
-void VulkanHandler::getResults(void* result, ComputePipeline& pipeline){
-
-    memcpy(result, pipeline.getOutputBuffer().m_data, pipeline.getOutputBuffer().m_bufferSize);
+void VulkanHandler::cleanup(GpuStorageBuffer& buffer){
+    buffer.cleanup(m_logicalDevice);
 }
 
-
-void VulkanHandler::cleanup(std::vector<ComputePipeline> pipelines) {
+void VulkanHandler::cleanup(std::vector<ComputePipeline>& pipelines) {
 
     for (ComputePipeline pipeline : pipelines){
         pipeline.cleanup(m_logicalDevice);
     }
 
+    vkDeviceWaitIdle(m_logicalDevice);
+
+    vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &m_commandBuffer);
     vkDestroyCommandPool(m_logicalDevice, m_commandPool, nullptr);
     vkDestroyDevice(m_logicalDevice, nullptr);
 

@@ -1,3 +1,5 @@
+//all functions and formulas were taken directly from Eric Lengyels Terathon Math library: https://github.com/EricLengyel/Terathon-Math-Library/tree/main
+
 struct Point3D {
     float x;
     float y;
@@ -11,6 +13,11 @@ vec3 toVec(Point3D p) {
 Point3D toPoint(vec3 v) {
     return Point3D(v.x, v.y, v.z);
 }
+
+float squaredMag(const Point3D p){
+    return (p.x * p.x + p.y * p.y + p.z * p.z);
+}
+
 
 struct Vector3D {
     float x;
@@ -38,11 +45,20 @@ Point3D add(const Point3D p, const Vector3D v){
     return Point3D(p.x+v.x, p.y+v.y, p.z+v.z);
 }
 
+Vector3D add(const Vector3D v1, const Vector3D v2){
+    return Vector3D(v1.x+v2.x, v1.y+v2.y, v1.z+v2.z);
+}
+
 Vector3D subtract(const Point3D p1, const Point3D p2) {
     return Vector3D(p1.x-p2.x, p1.y-p2.y, p1.z-p2.z);
 }
+
 Point3D subtract(const Point3D p, const Vector3D v) {
     return Point3D(p.x-v.x, p.y-v.y, p.z-v.z);
+}
+
+Vector3D subtract(const Vector3D v1, const Vector3D v2) {
+    return Vector3D(v1.x-v2.x, v1.y-v2.y, v1.z-v2.z);
 }
 
 Vector3D multiply(const Vector3D v, float scalar) {
@@ -72,6 +88,25 @@ struct Bivector3D {
     float y;
     float z;
 };
+
+Bivector3D complement(const Vector3D v){
+    return Bivector3D(v.x, v.y, v.z);
+}
+
+Vector3D complement(const Bivector3D v){
+    return Vector3D(v.x, v.y, v.z);
+}
+Bivector3D add(const Bivector3D a, Bivector3D b){
+    return Bivector3D(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+Vector3D antiwedge(const Bivector3D a, const Bivector3D b){
+    return Vector3D(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+}
+
+Bivector3D wedge(const Vector3D v, const Point3D p){
+    return Bivector3D(v.y * p.z - v.z * p.y, v.z * p.x - v.x * p.z, v.x * p.y - v.y * p.x);
+}
 
 struct Circle3D {
     Plane3D g;
@@ -129,3 +164,53 @@ struct Capsule {
     Point3D b;
     float radius;
 };
+
+struct Quaternion{
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
+Bivector3D getBivector3D(Quaternion q){
+    return Bivector3D(q.x,q.y,q.z);
+}
+
+struct Motor3D{
+    Quaternion v;
+    Quaternion m;
+};
+
+Point3D getPosition(Motor3D motor){
+    float A03 = motor.v.y * motor.m.z - motor.v.z * motor.m.y;
+	float A13 = motor.v.z * motor.m.x - motor.v.x * motor.m.z;
+	float A23 = motor.v.x * motor.m.y - motor.v.y * motor.m.x;
+	float B03 = motor.m.x * motor.v.w - motor.v.x * motor.m.w;
+	float B13 = motor.m.y * motor.v.w - motor.v.y * motor.m.w;
+	float B23 = motor.m.z * motor.v.w - motor.v.z * motor.m.w;
+
+	return Point3D((A03 + B03) * 2.0, (A13 + B13) * 2.0, (A23 + B23) * 2.0);
+}
+
+Point3D transform(const Point3D p, const Motor3D Q){
+    Bivector3D a = add(wedge(complement(getBivector3D(Q.v)), p), getBivector3D(Q.m));
+    return add(p, multiply(add(antiwedge(getBivector3D(Q.v), a), subtract(multiply(complement(a), Q.v.w), multiply(complement(getBivector3D(Q.v)), Q.m.w))), 2.0));
+}
+
+Sphere3D applyTransform(const Sphere3D sphere, const Motor3D motor, const float scale) {
+    const float radius = sqrt(squaredRadiusNorm(sphere)) * scale;
+    const Point3D center = getPosition(motor);
+    return Sphere3D(-1.0, center.x, center.y, center.z, -(squaredMag(center) - radius * radius) * 0.5);
+}
+
+Capsule applyTransform(const Capsule capsule, const Motor3D motor, const float scale){
+    Capsule result;
+    result.a      = transform(Point3D(capsule.a.x * scale, capsule.a.y * scale, capsule.a.z * scale), motor);
+    result.b      = transform(Point3D(capsule.b.x * scale, capsule.b.y * scale, capsule.b.z * scale), motor);
+    result.radius = capsule.radius * scale;
+    return result;
+}
+
+
+
+

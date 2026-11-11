@@ -3,25 +3,21 @@
 #extension GL_ARB_shading_language_include : enable
 
 #include "shader_terathon.h"
-#include "contact.h"
-
-
-struct GpuSpherePair {
-    vec2 idA;
-    Sphere3D sphereA;
-    vec2 idB;
-    Sphere3D sphereB;
-};
+#include "vgeo.h"
 
 layout(push_constant) uniform PushConstants {
     uint N;
 } pc;
 
-layout(set = 0, binding = 0) readonly buffer inBuffer{
-    GpuSpherePair pair_in[];
+layout(std430, set = 0, binding = 0) readonly buffer sphereBuffer{
+    Sphere3D spheres_in[];
 };
 
-layout(set = 0, binding = 1) buffer outBuffer{
+layout(std430, set = 1, binding = 0) readonly buffer inBuffer{
+    CollisionPairData pairData_in[];
+};
+
+layout(std430, set = 1, binding = 1) writeonly buffer outBuffer{
     Contact contacts[];
 };
 
@@ -32,11 +28,20 @@ void main() {
 
     if (index >= pc.N) return;
 
-    const vec2 idA = pair_in[index].idA;
-    const vec2 idB = pair_in[index].idB;
+    const uint indexA = pairData_in[index].indexA;
+    const uint indexB = pairData_in[index].indexB;
 
-    const Sphere3D sphereA = pair_in[index].sphereA;
-    const Sphere3D sphereB = pair_in[index].sphereB;
+    const vec2 idA = pairData_in[index].instanceHandleA;
+    const vec2 idB = pairData_in[index].instanceHandleB;
+
+    const Motor3D motorA = pairData_in[index].motorA;
+    const Motor3D motorB = pairData_in[index].motorB;
+
+    Sphere3D sphereA = spheres_in[indexA];
+    Sphere3D sphereB = spheres_in[indexB];
+
+    sphereA = applyTransform(sphereA, motorA, 1.0);
+    sphereB = applyTransform(sphereB, motorB, 1.0);
 
     const Sphere3D s1 = unitize(sphereA);
     const Sphere3D s2 = unitize(sphereB);

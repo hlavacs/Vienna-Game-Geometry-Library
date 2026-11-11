@@ -3,7 +3,7 @@
 #extension GL_ARB_shading_language_include : enable
 
 #include "shader_terathon.h"
-#include "contact.h"
+#include "vgeo.h"
 
 layout(push_constant) uniform PushConstants {
     uint N;
