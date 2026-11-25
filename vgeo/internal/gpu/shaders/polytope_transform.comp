@@ -1,0 +1,43 @@
+#version 450
+
+#extension GL_ARB_shading_language_include : enable
+
+#include "shader_terathon.h"
+#include "vgeo.h"
+
+layout(push_constant) uniform PushConstants {
+    uint N;
+} pc;
+
+layout(std430, set = 0, binding = 0) readonly buffer inBuffer{
+    Point3D polytopes_in[];
+};
+
+layout(std430, set = 0, binding = 1) writeonly buffer outBuffer{
+    Point3D polytopes_out[];
+};
+
+layout(std430, set = 1, binding = 0) readonly buffer dataBuffer{
+    TransformData transformData[];
+};
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+
+    uint invocationIndex = gl_GlobalInvocationID.x;
+
+    if (invocationIndex >= pc.N) return;
+
+    uint polytopeIndex = transformData[invocationIndex].index;
+    uint polytopeSize = transformData[invocationIndex].size;
+    Motor3D motor = transformData[invocationIndex].motor;
+    float scale = transformData[invocationIndex].scale;
+
+    for(uint i=0; i < polytopeSize; i++){
+        Point3D point = polytopes_in[polytopeIndex+i];
+        point = applyTransform(point, motor, scale);
+        polytopes_out[polytopeIndex+i] = point;
+    }
+
+}

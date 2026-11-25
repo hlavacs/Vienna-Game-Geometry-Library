@@ -11,6 +11,7 @@
 #include "vgeo/internal/gpu/shapes/AaBox.hpp"
 #include "vgeo/internal/gpu/shapes/GpuContact.hpp"
 #include "vgeo/internal/gpu/IntersectionType.hpp"
+#include "vgeo/internal/gpu/TransformPipeline.hpp"
 
 #include <TSConformal3D.h>
 #include "vgeo/internal/cpu/shapes/Sphere.hpp"
@@ -56,16 +57,17 @@ class GpuBackend {
 
     std::vector<PolytopeInfo> m_polytopeInfos;
 
+    TransformPipeline m_sphereTransform;
+    TransformPipeline m_capsuleTransform;
+    TransformPipeline m_polytopeTransform;
+    //TransformPipeline m_aaBoxesTransform;
+
     GpuStorageBuffer m_aaBoxesBuffer;
-    GpuStorageBuffer m_capsulesBuffer;
-    GpuStorageBuffer m_polytopesBuffer;
-    GpuStorageBuffer m_spheresBuffer;
 
     std::map<uint64_t, InstanceHandle> m_instanceHandles;
     std::vector<ComputePipeline> m_computePipelines;
 
 public:
-    int                test;
     Bv                 m_boundingVolume;
     std::vector<GpuContact> m_contacts;
 
@@ -83,12 +85,14 @@ public:
     GeometryHandle defineSphere(real radius){
         GeometryHandle handle = addShape(m_sphereRegistry, m_spheres, vgeo::internal::cpu::Sphere{radius});
         
-        if(m_spheres.size() * sizeof(vgeo::internal::cpu::Sphere) > m_spheresBuffer.m_bufferSize){
-            m_vulkanHandler.growGpuStorageBuffer(m_spheresBuffer);
+        if(m_spheres.size() * sizeof(vgeo::internal::cpu::Sphere) > m_sphereTransform.getInputBuffer().m_bufferSize){
+            m_vulkanHandler.growGpuStorageBuffer(m_sphereTransform.getInputBuffer());
+            m_vulkanHandler.growGpuStorageBuffer(m_sphereTransform.getOutputBuffer());
+            m_sphereTransform.updateInOutDescriptors();;
             updateComputePipelines(ShapeType::Sphere);
         }
             
-        m_vulkanHandler.updateGpuStorageBuffer(m_spheresBuffer, m_spheres.data(), m_spheres.size() * sizeof(vgeo::internal::cpu::Sphere));
+        m_vulkanHandler.updateGpuStorageBuffer(m_sphereTransform.getInputBuffer(), m_spheres.data(), m_spheres.size() * sizeof(vgeo::internal::cpu::Sphere));
 
         return handle;
     }
@@ -96,12 +100,14 @@ public:
     GeometryHandle defineCapsule(real halfLength, real radius){
         GeometryHandle handle = addShape(m_capsuleRegistry, m_capsules, vgeo::internal::cpu::Capsule{halfLength, radius});
 
-        if(m_capsules.size() * sizeof(vgeo::internal::cpu::Capsule) > m_capsulesBuffer.m_bufferSize){
-            m_vulkanHandler.growGpuStorageBuffer(m_capsulesBuffer);
-            updateComputePipelines(ShapeType::Sphere);
+        if(m_capsules.size() * sizeof(vgeo::internal::cpu::Capsule) > m_capsuleTransform.getInputBuffer().m_bufferSize){
+            m_vulkanHandler.growGpuStorageBuffer(m_capsuleTransform.getInputBuffer());
+            m_vulkanHandler.growGpuStorageBuffer(m_capsuleTransform.getOutputBuffer());
+            m_capsuleTransform.updateInOutDescriptors();
+            updateComputePipelines(ShapeType::Capsule);
         }
 
-        m_vulkanHandler.updateGpuStorageBuffer(m_capsulesBuffer, m_capsules.data(), m_capsules.size() * sizeof(vgeo::internal::cpu::Capsule));
+        m_vulkanHandler.updateGpuStorageBuffer(m_capsuleTransform.getInputBuffer(), m_capsules.data(), m_capsules.size() * sizeof(vgeo::internal::cpu::Capsule));
 
         return handle;
     }
@@ -110,14 +116,52 @@ public:
         vgeo::internal::cpu::Polytope polytope = vgeo::internal::cpu::Polytope{ConvexHullBuilder::build(points)};
         GeometryHandle handle = addShape(m_polytopeRegistry, m_polytopes, polytope);
 
-
         uint32_t index = handle.getIndex();
         if(index >= m_polytopeInfos.size()){
             m_polytopeInfos.resize(index+1);
         }
-        m_polytopeInfos[index] = PolytopeInfo{0, polytope.getVertices().size()};
-        updateOffsets(m_polytopeInfos);
+
+        m_polytopeInfos[index] = PolytopeInfo{0, static_cast<uint32_t>(polytope.getVertices().size())};
+        updateOffsets();
+
+        std::vector<Terathon::Point3D> allVertices;
+        for(uint32_t i=0; i < m_polytopes.size(); i++){
+            for(uint32_t j=0; j < m_polytopes[i].getVertices().size(); j++){
+                allVertices.push_back(m_polytopes[i].getVertices()[j]);
+            } 
+        }
+        for(auto point : allVertices){
+            std::cout << "{" << point.x << ", " << point.y << ", " << point.z << "}\n";
+        }
+
+        if(allVertices.size() * sizeof(Terathon::Point3D) > m_polytopeTransform.getInputBuffer().m_bufferSize){
+            m_vulkanHandler.growGpuStorageBuffer(m_polytopeTransform.getInputBuffer());
+            m_vulkanHandler.growGpuStorageBuffer(m_polytopeTransform.getOutputBuffer());
+            m_polytopeTransform.updateInOutDescriptors();
+            updateComputePipelines(ShapeType::Polytope);
+        }
+
+        m_vulkanHandler.updateGpuStorageBuffer(m_polytopeTransform.getInputBuffer(), allVertices.data(), allVertices.size() * sizeof(Terathon::Point3D));
+
         return handle;
+    }
+
+    void remove(GeometryHandle handle) {
+        switch(handle.getType()){
+            case ShapeType::Sphere:
+                m_spheres[handle.getIndex()] = vgeo::internal::cpu::Sphere{};
+                m_vulkanHandler.updateGpuStorageBuffer(m_sphereTransform.getInputBuffer(), m_spheres.data(), m_spheres.size() * sizeof(vgeo::internal::cpu::Sphere));
+                return;
+            case ShapeType::Capsule:
+                m_capsules[handle.getIndex()] = vgeo::internal::cpu::Capsule{};
+                m_vulkanHandler.updateGpuStorageBuffer(m_capsuleTransform.getInputBuffer(), m_capsules.data(), m_capsules.size() * sizeof(vgeo::internal::cpu::Capsule));
+                return;
+            case ShapeType::Polytope:
+                m_polytopes[handle.getIndex()] = vgeo::internal::cpu::Polytope{};
+                m_polytopeInfos[handle.getIndex()].size = 0;
+                updateOffsets();
+                return;
+        }
     }
     /*
     GeometryHandle define(const CapsuleDesc& desc) {
@@ -172,10 +216,13 @@ private:
         for(uint32_t i = 0; i < structure.size(); i++){
             switch(structure[i]){
                 case(vgeo::ShapeType::Sphere):
-                    gpuBuffers.push_back(std::ref(m_spheresBuffer));
+                    gpuBuffers.push_back(std::ref(m_sphereTransform.getOutputBuffer()));
                     continue;
                 case(vgeo::ShapeType::Capsule):
-                    gpuBuffers.push_back(std::ref(m_capsulesBuffer));
+                    gpuBuffers.push_back(std::ref(m_capsuleTransform.getOutputBuffer()));
+                    continue;
+                case(vgeo::ShapeType::Polytope):
+                    gpuBuffers.push_back(std::ref(m_polytopeTransform.getOutputBuffer()));
                     continue;
             }
         }
@@ -184,40 +231,83 @@ private:
 
     }
 
-    void updateComputePipelines(ShapeType type){
-        
+    void updateComputePipelines(ShapeType type){    
         for(ComputePipeline& pipeline : m_computePipelines){
             if(pipeline.referencesBuffer(type)){
-                m_vulkanHandler.updateDescriptorBinding(pipeline, type);
+                pipeline.updateDescriptor(type);
             }
         }
     }
 
-    void updateOffsets(std::vector<PolytopeInfo> infos){
+
+    void updateOffsets(){
         uint32_t offset = 0;
-        for(auto info : infos){
+        for(auto& info : m_polytopeInfos){
             info.offset = offset;
             offset += info.size;
+            std::cout << "Offset: " << info.offset << ", Size: " << info.size << "\n";
         }
+    }
+
+    void createAndAddTransformData(ShapeType type, uint32_t index, uint32_t size, Terathon::Motor3D motor, float scale){
+        TransformData transformData = TransformData{index, size, motor, scale};
+        switch(type){
+            case ShapeType::Sphere:
+                m_sphereTransform.addTransformData(transformData);
+                return;
+            case ShapeType::Capsule:
+                m_capsuleTransform.addTransformData(transformData);
+                return;
+            case ShapeType::Polytope:
+                m_polytopeTransform.addTransformData(transformData);
+                return;
+        }
+    }
+
+    void checkStorageBufferSizes() {
+        while(!m_sphereTransform.checkTransformDataBufferSize()){
+            m_vulkanHandler.growStorageBuffer(m_sphereTransform.getTransformDataBuffer());
+            m_sphereTransform.updateTransformDataDescriptorSet();
+        }
+
+        while(!m_capsuleTransform.checkTransformDataBufferSize()){
+            m_vulkanHandler.growStorageBuffer(m_capsuleTransform.getTransformDataBuffer());
+            m_capsuleTransform.updateTransformDataDescriptorSet();
+        }       
+        
+        while(!m_polytopeTransform.checkTransformDataBufferSize()){
+            m_vulkanHandler.growStorageBuffer(m_polytopeTransform.getTransformDataBuffer());
+            m_polytopeTransform.updateTransformDataDescriptorSet();
+        } 
+
+        for(ComputePipeline& pipeline : m_computePipelines){
+            while(!pipeline.checkCalcDataBufferSize()){
+                m_vulkanHandler.growStorageBuffer(pipeline.getCalcDataBuffer());
+                m_vulkanHandler.growStorageBuffer(pipeline.getOutputBuffer());
+                pipeline.updateCalcDataDescriptorSet();
+                pipeline.updateOutputDescriptorSet();
+            }
+        }
+        
     }
     
 };
 
 template <typename Bv>
 GpuBackend<Bv>::GpuBackend(VkPhysicalDevice& physicalDevice) : m_vulkanHandler(physicalDevice) {
-    test = 1;
 
     m_vulkanHandler.createLogicalDevice();
 
-    m_aaBoxesBuffer = m_vulkanHandler.createGpuStorageBuffer(sizeof(vgeo::internal::cpu::AaBox)*BUFFEROBJECTS);
-    m_capsulesBuffer = m_vulkanHandler.createGpuStorageBuffer(sizeof(vgeo::internal::cpu::Capsule)*BUFFEROBJECTS);
-    m_polytopesBuffer = m_vulkanHandler.createGpuStorageBuffer(sizeof(Terathon::Point3D)*BUFFEROBJECTS);
-    m_spheresBuffer = m_vulkanHandler.createGpuStorageBuffer(sizeof(vgeo::internal::cpu::Sphere)*BUFFEROBJECTS);
+    m_sphereTransform = m_vulkanHandler.createTransformPipeline("shaders/sphere_transform.spv", sizeof(vgeo::internal::cpu::Sphere) * BUFFEROBJECTS);
+    m_capsuleTransform = m_vulkanHandler.createTransformPipeline("shaders/capsule_transform.spv", sizeof(vgeo::internal::cpu::Capsule) * BUFFEROBJECTS);
+    m_polytopeTransform = m_vulkanHandler.createTransformPipeline("shaders/polytope_transform.spv", sizeof(vgeo::internal::cpu::Capsule) * BUFFEROBJECTS);
+
+    m_aaBoxesBuffer = m_vulkanHandler.createGpuStorageBuffer(sizeof(vgeo::internal::cpu::AaBox) * BUFFEROBJECTS);
     
-    //m_computePipelines.resize(SHADERCOUNT);
     initPipeline("shaders/sphere_sphere.spv", {ShapeType::Sphere});
     initPipeline("shaders/capsule_capsule.spv", {ShapeType::Capsule});
     initPipeline("shaders/capsule_sphere.spv", {ShapeType::Capsule, ShapeType::Sphere});
+    initPipeline("shaders/gjk.spv", {ShapeType::Polytope});
 
     m_vulkanHandler.createCommandPool();
     
@@ -227,7 +317,15 @@ GpuBackend<Bv>::GpuBackend(VkPhysicalDevice& physicalDevice) : m_vulkanHandler(p
 template <typename Bv>
 CollisionResult GpuBackend<Bv>::query() {
 
+    checkStorageBufferSizes();
+
     m_vulkanHandler.startRecordingCommandBuffer();
+
+    m_vulkanHandler.recordCommandBuffer(m_sphereTransform);
+    m_vulkanHandler.recordCommandBuffer(m_capsuleTransform);
+    m_vulkanHandler.recordCommandBuffer(m_polytopeTransform);
+
+    m_vulkanHandler.barrier();
     
     std::vector<CollisionPair> results = {};
 
@@ -247,12 +345,11 @@ CollisionResult GpuBackend<Bv>::query() {
             std::cout << "index: " << pipeline.getCalcData()[0].indexA << " and " << pipeline.getCalcData()[0].indexB << "\n";
             std::cout << "handle: " << pipeline.getCalcData()[0].instanceHandleA << " and " << pipeline.getCalcData()[0].instanceHandleB << "\n";
             std::cout << "buffers: " << pipeline.getGpuBuffers().size() << "\n";
-            contacts.resize(BUFFEROBJECTS);
-            pipeline.getResults(&contacts[0]);
             contacts.resize(pipeline.getCalcDataSize());
+            pipeline.getResults(&contacts[0]);
         }
         for(uint32_t j=0; j < contacts.size(); j++){
-            std::cout << "contact: " << contacts[j].depth << "\n";
+            //std::cout << "contact: " << contacts[j].depth << "\n";
             if(contacts[j].hasContact) {
                 Contact contact{contacts[j].normal, contacts[j].depth, contacts[j].witnessA, contacts[j].witnessB};
                 InstanceHandle handleA = m_instanceHandles.find(contacts[j].idA)->second;
@@ -262,6 +359,10 @@ CollisionResult GpuBackend<Bv>::query() {
         }
         
     }
+
+    m_sphereTransform.resetTransformData();
+    m_capsuleTransform.resetTransformData();
+    m_polytopeTransform.resetTransformData();
 
     for(ComputePipeline& pipeline : m_computePipelines){
         pipeline.resetCalcData();
@@ -297,8 +398,25 @@ void GpuBackend<Bv>::addCollisionTestPair(InstanceHandle instanceA, GeometryHand
         types.push_back(typeB);
     }
 
-    CollisionTestPairData collisionData = CollisionTestPairData{static_cast<uint32_t>(geometryA.getType()), static_cast<uint32_t>(geometryB.getType()), geometryA.getIndex(), 
-        geometryB.getIndex(), instanceA.getId(), instanceB.getId(), 0, 0, motorA, motorB};
+    uint32_t indexA = geometryA.getIndex();
+    uint32_t sizeA = 0;
+    if(geometryA.getType() == ShapeType::Polytope){
+        indexA = m_polytopeInfos[geometryA.getIndex()].offset;
+        sizeA = m_polytopeInfos[geometryA.getIndex()].size;
+    }
+ 
+    uint32_t indexB = geometryB.getIndex();
+    uint32_t sizeB = 0;
+    if(geometryB.getType() == ShapeType::Polytope){
+        indexB = m_polytopeInfos[geometryB.getIndex()].offset;
+        sizeB = m_polytopeInfos[geometryB.getIndex()].size;
+    }
+
+    createAndAddTransformData(geometryA.getType(), indexA, sizeA, motorA, 1.0);
+    createAndAddTransformData(geometryB.getType(), indexB, sizeB, motorB, 1.0);
+
+    CollisionTestPairData collisionData = CollisionTestPairData{static_cast<uint32_t>(geometryA.getType()), static_cast<uint32_t>(geometryB.getType()), 
+        indexA, indexB, instanceA.getId(), instanceB.getId(), sizeA, sizeB};
     
     bool added = false;
     for(ComputePipeline& pipeline : m_computePipelines){
@@ -316,10 +434,15 @@ template <typename Bv>
 void GpuBackend<Bv>::cleanup() {
 
     m_vulkanHandler.cleanup(m_aaBoxesBuffer);
-    m_vulkanHandler.cleanup(m_capsulesBuffer);
-    m_vulkanHandler.cleanup(m_polytopesBuffer);
-    m_vulkanHandler.cleanup(m_spheresBuffer);
-    m_vulkanHandler.cleanup(m_computePipelines);
+
+    m_sphereTransform.cleanup();
+    m_capsuleTransform.cleanup();
+    m_polytopeTransform.cleanup();
+
+    for (ComputePipeline pipeline : m_computePipelines){
+        pipeline.cleanup();
+    }
+    m_vulkanHandler.cleanup();
 }
 
 }

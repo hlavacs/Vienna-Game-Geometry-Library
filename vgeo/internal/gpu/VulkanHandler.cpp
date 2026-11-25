@@ -19,7 +19,7 @@ static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(globalPath, std::ios::ate | std::ios::binary);
 
     if (!file.is_open()) {
-        throw std::runtime_error("failed to open file! current path: " + std::filesystem::current_path().generic_string());
+        throw std::runtime_error("failed to open file! current path: " + globalPath);
     }
 
     size_t fileSize = (size_t) file.tellg();
@@ -229,6 +229,35 @@ void VulkanHandler::updateGpuStorageBuffer(GpuStorageBuffer& buffer, void* input
     vkFreeMemory(m_logicalDevice, stagingBufferMemory, nullptr);
 }
 
+void VulkanHandler::growStorageBuffer(StorageBuffer& buffer) {
+    VkBuffer newBuffer;
+    VkDeviceMemory newMemory;
+    VkDeviceSize newSize = buffer.m_bufferSize * 2;
+
+    createBuffer(newSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, newBuffer, newMemory);
+
+    void* newData;
+
+    if (vkMapMemory(m_logicalDevice, newMemory, 0, newSize, 0, &newData) != VK_SUCCESS) {
+        vkDestroyBuffer(m_logicalDevice, newBuffer, nullptr);
+        vkFreeMemory(m_logicalDevice, newMemory, nullptr);
+        throw std::runtime_error("Failed to map grown storage buffer");
+    }
+
+    // Ensure the old allocation is no longer in use.
+    if (buffer.m_data != nullptr) {
+        vkUnmapMemory(m_logicalDevice, buffer.m_bufferMemory);
+    }
+
+    vkDestroyBuffer(m_logicalDevice, buffer.m_buffer, nullptr);
+    vkFreeMemory(m_logicalDevice, buffer.m_bufferMemory, nullptr);
+
+    buffer.m_buffer = newBuffer;
+    buffer.m_bufferMemory = newMemory;
+    buffer.m_bufferSize = newSize;
+    buffer.m_data = newData;
+}
+
 void VulkanHandler::growGpuStorageBuffer(GpuStorageBuffer& buffer){
 
     VkBuffer oldBuffer = buffer.m_buffer;
@@ -242,7 +271,7 @@ void VulkanHandler::growGpuStorageBuffer(GpuStorageBuffer& buffer){
 
     createBuffer(newBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, newBuffer, newBufferMemory);
 
-    copyBuffer(oldBuffer, newBuffer, oldBufferSize);
+    //copyBuffer(oldBuffer, newBuffer, oldBufferSize);
 
     vkDestroyBuffer(m_logicalDevice, oldBuffer, nullptr);
     vkFreeMemory(m_logicalDevice, oldBufferMemory, nullptr);
@@ -250,10 +279,31 @@ void VulkanHandler::growGpuStorageBuffer(GpuStorageBuffer& buffer){
     buffer.m_buffer = newBuffer;
     buffer.m_bufferMemory = newBufferMemory;
     buffer.m_bufferSize = newBufferSize;
+
 }
 
-ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const std::vector<std::reference_wrapper<GpuStorageBuffer>>& gpuStorageBuffers, std::vector<ShapeType> structure){
+TransformPipeline VulkanHandler::createTransformPipeline(const std::string& filename, VkDeviceSize bufferSize) {
 
+    GpuStorageBuffer inputBuffer = createGpuStorageBuffer(bufferSize);
+    GpuStorageBuffer outputBuffer = createGpuStorageBuffer(bufferSize);
+    StorageBuffer transformDataBuffer = createStorageBuffer(sizeof(TransformData)*SHADER_LOCAL_SIZE_X);
+
+    auto code = readFile(filename);
+    if(code.empty()){
+        throw std::runtime_error("Code is empty!");
+    }
+    VkShaderModule shaderModule = createShaderModule(code);
+
+    TransformPipeline pipeline{m_logicalDevice, shaderModule, inputBuffer, outputBuffer, transformDataBuffer};
+
+    vkDestroyShaderModule(m_logicalDevice, shaderModule, nullptr);
+
+    return pipeline;
+}
+
+ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const std::vector<std::reference_wrapper<GpuStorageBuffer>>& gpuStorageBuffers, 
+        std::vector<ShapeType> structure)
+{
     StorageBuffer calcDataStorageBuffer = createStorageBuffer(sizeof(CollisionTestPairData)*SHADER_LOCAL_SIZE_X);
     StorageBuffer outputStorageBuffer = createStorageBuffer(sizeof(GpuContact)*SHADER_LOCAL_SIZE_X);
 
@@ -263,20 +313,15 @@ ComputePipeline VulkanHandler::createPipeline(const std::string& filename, const
     }
     VkShaderModule shaderModule = createShaderModule(code);
 
-    ComputePipeline pipeline{structure};
-    pipeline.initComputePipeline(m_logicalDevice, shaderModule, gpuStorageBuffers, calcDataStorageBuffer, outputStorageBuffer);
+    ComputePipeline pipeline{m_logicalDevice, structure, shaderModule, gpuStorageBuffers, calcDataStorageBuffer, outputStorageBuffer};
     
     vkDestroyShaderModule(m_logicalDevice, shaderModule, nullptr);
 
     return pipeline;
 }
 
-void VulkanHandler::updateDescriptorBinding(ComputePipeline& pipeline, ShapeType type){
-    pipeline.updateDescriptor(m_logicalDevice, type);
-}
 
 void VulkanHandler::startRecordingCommandBuffer(){
-
     if (vkResetCommandBuffer(m_commandBuffer, 0) != VK_SUCCESS) {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
@@ -289,8 +334,24 @@ void VulkanHandler::startRecordingCommandBuffer(){
     }
 }
 
-void VulkanHandler::recordCommandBuffer(ComputePipeline& pipeline) {
+void VulkanHandler::recordCommandBuffer(TransformPipeline& pipeline) {
+    if(pipeline.getTransformDataSize() == 0) return;
 
+    pipeline.copyTransformDataToBuffer();
+
+    uint32_t pushConstant = pipeline.getTransformDataSize();
+
+    vkCmdPushConstants(m_commandBuffer, pipeline.getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(uint32_t), &pushConstant);
+    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getPipeline());
+    vkCmdBindDescriptorSets(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.getPipelineLayout(), 0, 2, pipeline.getDescriptorSets().data(), 0, 0);
+
+    uint32_t groupCount = (pipeline.getTransformDataSize() + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
+    vkCmdDispatch(m_commandBuffer, groupCount, 1, 1);
+}
+
+void VulkanHandler::recordCommandBuffer(ComputePipeline& pipeline) {
+    if(pipeline.getCalcDataSize() == 0) return;
+    
     pipeline.copyCalcDataToBuffer();
 
     uint32_t pushConstant = pipeline.getCalcDataSize();
@@ -301,7 +362,22 @@ void VulkanHandler::recordCommandBuffer(ComputePipeline& pipeline) {
 
     uint32_t groupCount = (pipeline.getCalcDataSize() + SHADER_LOCAL_SIZE_X - 1) / SHADER_LOCAL_SIZE_X;
     vkCmdDispatch(m_commandBuffer, groupCount, 1, 1);
+}
 
+void VulkanHandler::barrier(){
+    VkMemoryBarrier2 barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+
+    VkDependencyInfo dependencyInfo{};
+    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.memoryBarrierCount = 1;
+    dependencyInfo.pMemoryBarriers = &barrier;
+
+    vkCmdPipelineBarrier2(m_commandBuffer, &dependencyInfo);
 }
 
 void VulkanHandler::runComputeShader(){
@@ -314,7 +390,6 @@ void VulkanHandler::runComputeShader(){
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_commandBuffer;
 
-
     if (vkQueueSubmit(m_computeQueue, 1, &submitInfo, nullptr) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit compute command buffer!");
     };
@@ -325,18 +400,12 @@ void VulkanHandler::cleanup(GpuStorageBuffer& buffer){
     buffer.cleanup(m_logicalDevice);
 }
 
-void VulkanHandler::cleanup(std::vector<ComputePipeline>& pipelines) {
-
-    for (ComputePipeline pipeline : pipelines){
-        pipeline.cleanup(m_logicalDevice);
-    }
-
+void VulkanHandler::cleanup() {
     vkDeviceWaitIdle(m_logicalDevice);
 
     vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &m_commandBuffer);
     vkDestroyCommandPool(m_logicalDevice, m_commandPool, nullptr);
     vkDestroyDevice(m_logicalDevice, nullptr);
-
 }
 
 }

@@ -6,13 +6,6 @@
 #include "vgeo.h"
 
 
-struct GpuCapsulePair{
-    vec2 id1;
-    Capsule capsule1;
-    vec2 id2;
-    Capsule capsule2;
-};
-
 layout(push_constant) uniform PushConstants {
     uint N;
 } pc;
@@ -39,17 +32,11 @@ void main() {
     const uint indexA = pairData_in[index].indexA;
     const uint indexB = pairData_in[index].indexB;
 
-    const vec2 id1 = pairData_in[index].instanceHandleA;
-    const vec2 id2 = pairData_in[index].instanceHandleB;
-
-    const Motor3D motorA = pairData_in[index].motorA;
-    const Motor3D motorB = pairData_in[index].motorB;
+    const uvec2 id1 = pairData_in[index].instanceHandleA;
+    const uvec2 id2 = pairData_in[index].instanceHandleB;
 
     Capsule capsule1 = capsules_in[indexA];
     Capsule capsule2 = capsules_in[indexB];
-
-    capsule1 = applyTransform(capsule1, motorA, 1.0);
-    capsule2 = applyTransform(capsule2, motorB, 1.0);
 
     Point3D a1 = capsule1.a;
     Point3D b1 = capsule1.b;

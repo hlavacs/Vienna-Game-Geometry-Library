@@ -31,17 +31,11 @@ void main() {
     const uint indexA = pairData_in[index].indexA;
     const uint indexB = pairData_in[index].indexB;
 
-    const vec2 idA = pairData_in[index].instanceHandleA;
-    const vec2 idB = pairData_in[index].instanceHandleB;
-
-    const Motor3D motorA = pairData_in[index].motorA;
-    const Motor3D motorB = pairData_in[index].motorB;
+    const uvec2 idA = pairData_in[index].instanceHandleA;
+    const uvec2 idB = pairData_in[index].instanceHandleB;
 
     Sphere3D sphereA = spheres_in[indexA];
     Sphere3D sphereB = spheres_in[indexB];
-
-    sphereA = applyTransform(sphereA, motorA, 1.0);
-    sphereB = applyTransform(sphereB, motorB, 1.0);
 
     const Sphere3D s1 = unitize(sphereA);
     const Sphere3D s2 = unitize(sphereB);

@@ -46,28 +46,19 @@ void main() {
     const uint indexA = pairData_in[index].indexA;
     const uint indexB = pairData_in[index].indexB;
 
-    const vec2 id1 = pairData_in[index].instanceHandleA;
-    const vec2 id2 = pairData_in[index].instanceHandleB;
-
-    const Motor3D motorA = pairData_in[index].motorA;
-    const Motor3D motorB = pairData_in[index].motorB;
+    const uvec2 id1 = pairData_in[index].instanceHandleA;
+    const uvec2 id2 = pairData_in[index].instanceHandleB;
 
     Capsule capsule;
     Sphere3D sphere;
 
     if(typeA == 1 && typeB == 3){
         capsule = capsules_in[indexA];
-        capsule = applyTransform(capsule, motorA, 1.0);
-
         sphere = spheres_in[indexB];
-        sphere = applyTransform(sphere, motorB, 1.0);
     }
     else if(typeA == 3 && typeB == 1){
         capsule = capsules_in[indexB];    
-        capsule = applyTransform(capsule, motorB, 1.0);
-
         sphere = spheres_in[indexA];
-        sphere = applyTransform(sphere, motorA, 1.0);
     }
     else{
         contacts[index] = Contact(false, 0.0, id1, id2, vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0));

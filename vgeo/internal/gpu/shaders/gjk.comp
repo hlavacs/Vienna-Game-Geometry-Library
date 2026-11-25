@@ -5,22 +5,44 @@
 #include "shader_terathon.h"
 #include "vgeo.h"
 
+
 layout(push_constant) uniform PushConstants {
     uint N;
 } pc;
 
-layout(std430, binding = 0) readonly buffer inBufferPoints{
-    Point3D points_in[];
+layout(std430, set = 0, binding = 0) readonly buffer polytopeBuffer{
+    Point3D polytopes_in[];
 };
 
-layout(std430, binding = 1) readonly buffer inBufferIndices{
-    vec2 indices_in[];
+layout(std430, set = 1, binding = 0) readonly buffer inBuffer{
+    CollisionPairData pairData_in[];
 };
 
-layout(std430, binding = 2) buffer outBuffer{
+layout(std430, set = 1, binding = 1) writeonly buffer outBuffer{
     Contact contacts[];
 };
 
 void main() {
+
+    uint index = gl_GlobalInvocationID.x;
+    
+    if (index >= pc.N) return;
+
+    const uint typeA = pairData_in[index].typeA;
+    const uint typeB = pairData_in[index].typeB;
+
+    const uint indexA = pairData_in[index].indexA;
+    const uint indexB = pairData_in[index].indexB;
+
+    const uvec2 idA = pairData_in[index].instanceHandleA;
+    const uvec2 idB = pairData_in[index].instanceHandleB;
+
+    const uint sizeA = pairData_in[index].sizeA;
+    const uint sizeB = pairData_in[index].sizeB;
+
+    float depth = 10.0;
+
+    contacts[index] = Contact(true, depth, idA, idB, toVec(polytopes_in[indexA]), toVec(polytopes_in[indexB]), toVec(polytopes_in[indexA+sizeA-1]));
+
 
 }

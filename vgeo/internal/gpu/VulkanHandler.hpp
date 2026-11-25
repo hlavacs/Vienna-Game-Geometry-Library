@@ -10,12 +10,12 @@
 
 #include "vgeo/internal/gpu/StorageBuffer.hpp"
 #include "vgeo/internal/gpu/ComputePipeline.hpp"
+#include "vgeo/internal/gpu/TransformPipeline.hpp"
 #include "vgeo/internal/gpu/shapes/GpuContact.hpp"
 
 namespace vgeo::internal::gpu {
 
 struct VulkanContext {
-    VkInstance m_instance;
     VkPhysicalDevice m_physicalDevice;
     VkDevice m_logicalDevice;
     VkQueue m_computeQueue;
@@ -38,17 +38,20 @@ class VulkanHandler{
         VulkanHandler(VkPhysicalDevice& physicalDevice);
         void createLogicalDevice();
         StorageBuffer createShapeStorageBuffer(vgeo::internal::cpu::Shape shape);
+        TransformPipeline createTransformPipeline(const std::string& filename, VkDeviceSize bufferSize);
         ComputePipeline createPipeline(const std::string& filename, const std::vector<std::reference_wrapper<GpuStorageBuffer>>& gpuStorageBuffers, std::vector<ShapeType> structure);
         void createCommandPool();
         GpuStorageBuffer createGpuStorageBuffer(VkDeviceSize bufferSize);
         void updateGpuStorageBuffer(GpuStorageBuffer& buffer, void* inputData, uint32_t inputDataSize);
+        void growStorageBuffer(StorageBuffer& buffer);
         void growGpuStorageBuffer(GpuStorageBuffer& buffer);
-        void updateDescriptorBinding(ComputePipeline& pipeline, ShapeType type);
         void startRecordingCommandBuffer();
+        void recordCommandBuffer(TransformPipeline& pipeline);
         void recordCommandBuffer(ComputePipeline& pipeline);
+        void barrier();
         void runComputeShader();
         void cleanup(GpuStorageBuffer& buffer);
-        void cleanup(std::vector<ComputePipeline>& pipelines);
+        void cleanup();
 
 
     private:

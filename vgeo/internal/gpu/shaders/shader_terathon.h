@@ -197,6 +197,10 @@ Point3D transform(const Point3D p, const Motor3D Q){
     return add(p, multiply(add(antiwedge(getBivector3D(Q.v), a), subtract(multiply(complement(a), Q.v.w), multiply(complement(getBivector3D(Q.v)), Q.m.w))), 2.0));
 }
 
+Point3D applyTransform(const Point3D p, const Motor3D motor, const float scale) {
+    return transform(Point3D(p.x * scale, p.y * scale, p.z * scale), motor);
+}
+
 Sphere3D applyTransform(const Sphere3D sphere, const Motor3D motor, const float scale) {
     const float radius = sqrt(squaredRadiusNorm(sphere)) * scale;
     const Point3D center = getPosition(motor);
